@@ -10,9 +10,9 @@
 using namespace lib7842;
 using namespace okapi;
 
-std::shared_ptr<ChassisController> chassis;
-std::shared_ptr<ChassisModel> model;
-std::shared_ptr<CustomOdometry> odom;
+std::shared_ptr<OdomChassisController> chassis;
+std::shared_ptr<OdomChassisController> model;
+std::shared_ptr<ThreeEncoderOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
 
@@ -30,11 +30,10 @@ void initialize() {
 		.withMotors({2,3},{-9,-10})
 		.withSensors( ADIEncoder(1,2), ADIEncoder(7,8) )
 		.withDimensions( AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green}, {10.2101761242_in, 3_in} )
-		.build();
+		.withOdometry()
+		.buildOdometry();
 
 	model = chassis->getModel();
-
-	odom = std::make_shared<CustomOdometry>(model, chassis->getChassisScales());
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	tray = std::make_shared<MotorGroup>(MotorGroup({1}));
@@ -101,10 +100,11 @@ void competition_initialize() {}
 void autonomous() {}
 
 void opcontrol() {
+	Controller master(ControllerId::master);
+		
 	bool intakeToggle = false;
 
 	while (true) {
-		Controller master(ControllerId::master);
 
 		double left;
 		double right;
@@ -115,9 +115,9 @@ void opcontrol() {
 			left = master.getAnalog(ControllerAnalog::rightY) + (.75 * master.getAnalog(ControllerAnalog::leftX));
 			right = master.getAnalog(ControllerAnalog::rightY) + (-.75 * master.getAnalog(ControllerAnalog::leftX));
 		}
-		if(true){
+
 			model->tank(left, right, .1);
-		}
+
 
 		if( master.getDigital(ControllerDigital::Y) ){
 			while(master.getDigital(ControllerDigital::Y)){
@@ -138,17 +138,14 @@ void opcontrol() {
 			intake->moveVelocity(100);
 		}
 
-		if(true ){
 			if(master.getDigital(ControllerDigital::L1)){
-				tray->moveVelocity(100);
+				tray->moveVelocity(50);
 			}else if(master.getDigital(ControllerDigital::L2)){
-				tray->moveVelocity(-100);
+				tray->moveVelocity(-50);
 			}else{
 				tray->moveVelocity(0);
 			}
-		}else{
-			
-		}
+
 
 		pros::delay(20);
 	}
