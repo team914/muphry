@@ -8,14 +8,24 @@
 using namespace lib7842;
 using namespace okapi;
 using namespace pros;
+using namespace Robot;
+using namespace Screen;
 
 void initialize() {
 	//wait for adi ports
 	delay(500);
 	printf("Initialize\n");
 
-//	Robot::init();
-//	Screen::init();
+	Logger::setDefaultLogger(
+		std::make_shared<Logger>(
+			TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
+			"/usd/log.txt", // Output to the PROS terminal
+			Logger::LogLevel::warn // Show errors and warnings
+		)
+	);
+
+	initRobot();
+	initScreen();
 
 }
 
@@ -35,10 +45,10 @@ void opcontrol() {
 	printf("opControl\n");
 
 	while(false){
-//		Drive::runIntake(1);
-//		Drive::runTray(1);
-//		Drive::runChassis(1, true);
-//		Drive::trayMacro();
+		Drive::runIntake(1);
+		Drive::runTray(1);
+		Drive::runChassis(1, true);
+		Drive::trayMacro();
 		delay(20);
 	}
 }

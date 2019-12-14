@@ -9,7 +9,7 @@ using namespace okapi;
 
 namespace Robot{
 
-void init();
+void initRobot();
 
 extern std::shared_ptr<MotorGroup> intake;
 extern std::shared_ptr<MotorGroup> tray;

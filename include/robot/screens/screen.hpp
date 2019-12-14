@@ -8,7 +8,7 @@ using namespace lib7842;
 
 namespace Screen{
 
-void init();
+void initScreen();
 
 extern std::shared_ptr<GUI::Screen> screen;
 
