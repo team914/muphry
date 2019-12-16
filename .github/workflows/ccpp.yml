@@ -9,9 +9,15 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.6
+    - name: Install dependencies
+      run: |
+        python3.6 -m pip install --user https://github.com/purduesigbots/pros-cli/releases/download/3.1.4/pros_cli_v5-3.1.4-py3-none-any.whl
+    - name: Test dependancies
+      run: |
+        prosv5 --version
     - name: make all
       run: make all
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
