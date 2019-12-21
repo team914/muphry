@@ -23,8 +23,9 @@ std::shared_ptr<AsyncPosPIDController> trayController10;
 std::shared_ptr<Controller> master;
 
 std::shared_ptr<GUI::Screen> scr;
+GUI::Selector* selector;
 
-std::map<std::string, std::function<void()>&> routines;
+//std::map<std::string, std::function<void()>&> routines;
 
 std::string routine;
 
@@ -34,12 +35,12 @@ void initialize() {
 	chassis = ChassisControllerBuilder()
 		.withMotors({2,3},{-9,-10})
 		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-		.withDimensions( AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green}, {10.2101761242_in, 3_in,10.2101761242_in, 3_in} )
+//		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
-	odom = std::make_shared<CustomOdometry>(std::dynamic_pointer_cast<SkidSteerModel>(model), chassis->getChassisScales());
+	odom = std::make_shared<CustomOdometry>(model, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR));
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
@@ -67,14 +68,14 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(),
 		.0004,
 		.0000,
-		.00005,
+		.0000,
 		.0
 	);
 	trayController10->startThread();
 	trayController10->flipDisable(true);
 
 	master = std::make_shared<Controller>();
-
+/*
 	routines["redBig"] = [&](){
 		printf("redBig");
 	};
@@ -87,25 +88,30 @@ void initialize() {
 	routines["blueSmall"] = [&](){
 		printf("blueSmall");
 	};
-
+//*/
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
 	scr->startTask("screenTask");
 
-	scr->makePage<GUI::Selector>("Selector")
-	  .button("Red Big",   [&]() { routine = "redBig";   })
-	  .button("Red Small", [&]() { routine = "redSmall"; })
-	  .newRow()
-	  .button("Blue Big",   [&]() { routine = "blueBig";   })
-	  .button("Blue Small", [&]() { routine = "blueSmall"; })
-	  .build();
+	GUI::Selector* iselector = std::dynamic_cast<GUI::Selector*>(
+		scr->makePage<GUI::Selector>("Selector")
+/*			.button("Red Big",   [&]() { routines.at("redBig")(); })
+			.button("Red Small", [&]() { routines.at("redSmall")(); })
+			.newRow()
+			.button("Blue Big", [&]()   { routines.at("blueBig")(); })//*/
+			.button("Blue Small", [&]() { printf("yee"); })
+			.build()
+		);
 	
 	pros::delay(10);
 	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
 
-	scr->makePage<GUI::Graph>("Temp").withRange(0,100)
-	  .withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
-	  .withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
-	  .withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
+/*	scr->makePage<GUI::Graph>("Temp")
+		.withRange(0,100)
+		.withGrid(2,4)
+		.withResolution(100)
+		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
+		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor(); });//*/
 
 }
 
@@ -113,7 +119,9 @@ void disabled() {}
 
 void competition_initialize() {}
 
-void autonomous() {}
+void autonomous() {
+//	selector->run();
+}
 
 void taskFnc(void*){
 	while(true){
