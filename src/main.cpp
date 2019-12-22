@@ -14,10 +14,10 @@ std::shared_ptr<ChassisController> chassis;
 std::shared_ptr<XDriveModel> model;
 std::shared_ptr<CustomOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
-std::shared_ptr<MotorGroup> tray;
-std::shared_ptr<Potentiometer> trayPotent;
-std::shared_ptr<AsyncPosPIDController> trayController7;
-std::shared_ptr<AsyncPosPIDController> trayController10;
+std::shared_ptr<MotorGroup> lift;
+//std::shared_ptr<Potentiometer> liftPotent;
+//std::shared_ptr<AsyncPosPIDController> liftController7;
+//std::shared_ptr<AsyncPosPIDController> liftController10;
 std::shared_ptr<Controller> master;
 
 std::shared_ptr<GUI::Screen> scr;
@@ -31,71 +31,56 @@ void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
 
 	chassis = ChassisControllerBuilder()
-<<<<<<< HEAD
 		.withMotors(2,3,-9,-10)
-//		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
-=======
-		.withMotors({2,3},{-9,-10})
 		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
 		.withDimensions( AbstractMotor::gearset::green, ChassisScales({12.5_in, 3.25_in, 0_in, 2.75_in}, imev5GreenTPR) )
->>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		.build();
 
 	model = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
 
 	odom = std::make_shared<CustomOdometry>(
 		model, 
-<<<<<<< HEAD
-		ChassisScales(
-			{10.2101761242_in, 3.25_in,10.2101761242_in, 3.25_in}, 
-			imev5GreenTPR
-		),
-=======
 		chassis->getChassisScales(),
->>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		TimeUtilFactory::withSettledUtilParams()
 	);
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
 
-	tray = std::make_shared<MotorGroup>(MotorGroup({1}));
-	tray->setGearing(AbstractMotor::gearset::red);
+	lift = std::make_shared<MotorGroup>(MotorGroup({1}));
+	lift->setGearing(AbstractMotor::gearset::red);
 
-	trayPotent = std::make_shared<Potentiometer>(3);
+/*
+	liftPotent = std::make_shared<Potentiometer>(3);
 
-	trayController7 = std::make_shared<AsyncPosPIDController>(
-		tray->getEncoder(),
-		tray,
+	liftController7 = std::make_shared<AsyncPosPIDController>(
+		lift->getEncoder(),
+		lift,
 		TimeUtilFactory::withSettledUtilParams(),
 		.0004,
 		.0000,
 		.00007,
 		.0
 	);
-	trayController7->startThread();
-	trayController7->flipDisable(true);
+	liftController7->startThread();
+	liftController7->flipDisable(true);
 
-	trayController10 = std::make_shared<AsyncPosPIDController>(
-		tray->getEncoder(),
-		tray,
+	liftController10 = std::make_shared<AsyncPosPIDController>(
+		lift->getEncoder(),
+		lift,
 		TimeUtilFactory::withSettledUtilParams(),
 		.0004,
 		.0000,
 		.00005,
 		.0
 	);
-	trayController10->startThread();
-	trayController10->flipDisable(true);
+	liftController10->startThread();
+	liftController10->flipDisable(true);
+//*/
 
 	master = std::make_shared<Controller>();
 
-<<<<<<< HEAD
-	routines["redBig"] = [&](){
-=======
 	routines.at("redBig") =[&](){
->>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		printf("redBig");
 	};
 	routines.at("redSmall") = [&](){
@@ -107,17 +92,6 @@ void initialize() {
 	routines.at("blueSmall") = [&](){
 		printf("blueSmall");
 	};
-<<<<<<< HEAD
-	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
-	scr->startTask("screenTask");
-
-	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
-	    &scr->makePage<GUI::Selector>("Selector")
-			.button("Red Big",   [&]() { routines.at("redBig")(); })
-			.button("Red Small", [&]() { routines.at("redSmall")(); })
-			.newRow()
-			.button("Blue Big", [&]()   { routines.at("blueBig")(); })//*/
-=======
 
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
 	scr->startTask("screenTask");
@@ -128,7 +102,6 @@ void initialize() {
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
 			.button("Blue Big", [&]()   { routines.at("blueBig")(); })
->>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
 			.build()
 		);
@@ -141,14 +114,8 @@ void initialize() {
 		.withGrid(2,4)
 		.withResolution(100)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
-		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
-<<<<<<< HEAD
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); }
-	);//*/
-
-=======
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
->>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
+		.withSeries("lift", LV_COLOR_MAKE(239,71,111), []() { return lift->getTemperature(); })
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getTopLeftMotor()->getTemperature(); });
 }
 
 void disabled() {}
@@ -162,25 +129,25 @@ void autonomous() {
 void taskFnc(void*){
 	while(true){
 		std::string out;
-		//Tray Optimal || Tray Over Temp || Tray Over Crnt || Tray WARNING
+		//lift Optimal || lift Over Temp || lift Over Crnt || lift WARNING
 		//Intk Optimal || Intk Over Temp || Intk Over Crnt || Intk WARNING
 		//Drve Optimal || Drve Over Temp || Drve Over Crnt || Drve WARNING	
 
 		const double maxTemp = 60;
 
-		//TRAY
-		if(tray->getTemperature()<maxTemp && !tray->isOverCurrent()){
+		//lift
+		if(lift->getTemperature()<maxTemp && !lift->isOverCurrent()){
 			master->clearLine(0);
-			out = "TrayTmp" + std::to_string(tray->getTemperature());
+			out = "liftTmp" + std::to_string(lift->getTemperature());
 			master->setText(0,0,out.c_str());
-		}else if(tray->getTemperature()>=maxTemp && !tray->isOverCurrent()){
+		}else if(lift->getTemperature()>=maxTemp && !lift->isOverCurrent()){
 			master->clearLine(0);
-			master->setText(0,0,"Tray Over Temp");
+			master->setText(0,0,"lift Over Temp");
 			master->rumble("- -");
 			pros::delay(500);
-		}else if(!tray->getTemperature()>=maxTemp && tray->isOverTemp()){
+		}else if(!lift->getTemperature()>=maxTemp && lift->isOverTemp()){
 			master->clearLine(0);
-			master->setText(0,0,"Tray Over Crnt");
+			master->setText(0,0,"lift Over Crnt");
 			master->rumble("- -");
 			pros::delay(500);
 		}
@@ -201,16 +168,16 @@ void taskFnc(void*){
 			pros::delay(500);
 		}
 		//DRIVE
-		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
+		if(model->getTopLeftMotor()->getTemperature()<maxTemp && !model->getTopLeftMotor()->isOverCurrent()){
 			master->clearLine(1);
-			out = "DrveTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
+			out = "DrveTmp" + std::to_string(model->getTopLeftMotor()->getTemperature());
 			master->setText(1,0,out.c_str());
-		}else if(model->getLeftSideMotor()->getTemperature()>=maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
+		}else if(model->getTopLeftMotor()->getTemperature()>=maxTemp && !model->getTopLeftMotor()->isOverCurrent()){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Temp");
 			master->rumble("- -");
 			pros::delay(500);
-		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
+		}else if(model->getTopLeftMotor()->getTemperature()<maxTemp && !model->getTopLeftMotor()->isOverTemp()){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Crnt");
 			master->rumble("- -");
@@ -224,18 +191,24 @@ void opcontrol() {
 	bool intakeToggle = false;
 
 	while (true) {
-		double left;
-		double right;
-		if( std::abs(master->getAnalog(ControllerAnalog::rightY)) <= .1){
-			left = master->getAnalog(ControllerAnalog::leftX);
-			right = -master->getAnalog(ControllerAnalog::leftX);			
-		}else{
-			left = master->getAnalog(ControllerAnalog::rightY) + (.75 * master->getAnalog(ControllerAnalog::leftX));
-			right = master->getAnalog(ControllerAnalog::rightY) + (-.75 * master->getAnalog(ControllerAnalog::leftX));
+		double forward = 0;
+		double right = 0;
+		double turn = 0;
+		//*
+		if( std::abs(master->getAnalog(ControllerAnalog::rightY)) <= .1 && std::abs(master->getAnalog(ControllerAnalog::rightX)) <= .1){
+			turn = master->getAnalog(ControllerAnalog::leftX);
+		}/*else if(std::abs(master->getAnalog(ControllerAnalog::rightX))<=.1){
+			forward = master->getAnalog(ControllerAnalog::rightY);
+			turn = master->getAnalog(ControllerAnalog::leftX);
+		}*/else{
+			forward = master->getAnalog(ControllerAnalog::rightY);
+			right = master->getAnalog(ControllerAnalog::rightX);
+			turn = master->getAnalog(ControllerAnalog::leftX);
 		}
+		//*/
 
-		model->tank(left, right, .1);
-		
+		model->xArcade(right, forward, turn, .1);
+
 		//INTAKE TOGGLE
 		if(master->getDigital(ControllerDigital::Y)){
 			intakeToggle=!intakeToggle;		
@@ -258,33 +231,20 @@ void opcontrol() {
 			intake->moveVelocity(0);
 		}
 
-		//TRAY
-		const double trayUp = 2000;
-		const double trayDown = -50;
+		//lift
+		const double liftUp = 2000;
+		const double liftDown = -50;
 		if(master->getDigital(ControllerDigital::L1)){
-			//trayController7
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(false);
-			trayController7->setTarget(trayUp);
+			lift->moveVelocity(100);
 		}else if(master->getDigital(ControllerDigital::L2)){
 			//go back down
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(true);
-			tray->moveVelocity(-100);
+			lift->moveVelocity(-100);
 		}else if(master->getDigital(ControllerDigital::right)){
-			//trayController10
-			trayController7->flipDisable(true);
-			trayController10->flipDisable(false);
-			trayController10->setTarget(trayUp);
+			//nothing
 		}else if(master->getDigital(ControllerDigital::down)){
 			//nothing
 		}else if(master->getDigital(ControllerDigital::Y)){
-			trayController7->setTarget(trayDown);
-			trayController10->setTarget(trayDown);
-			while(master->getDigital(ControllerDigital::Y)){
-				intake->moveVelocity(-100);
-			}
-			intake->moveVelocity(0);
+			//nothing
 		}
 
 		pros::delay(20);
