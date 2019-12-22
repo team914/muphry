@@ -11,7 +11,7 @@ using namespace lib7842;
 using namespace okapi;
 
 std::shared_ptr<ChassisController> chassis;
-std::shared_ptr<SkidSteerModel> model;
+std::shared_ptr<XDriveModel> model;
 std::shared_ptr<CustomOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
@@ -33,14 +33,21 @@ void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
 
 	chassis = ChassisControllerBuilder()
-		.withMotors({2,3},{-9,-10})
-		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-//		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
+		.withMotors(2,3,-9,-10)
+//		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
 		.build();
 
-	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
+	model = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
 
-	odom = std::make_shared<CustomOdometry>(model, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR));
+	odom = std::make_shared<CustomOdometry>(
+		model, 
+		ChassisScales(
+			{10.2101761242_in, 3.25_in,10.2101761242_in, 3.25_in}, 
+			imev5GreenTPR
+		),
+		TimeUtilFactory::withSettledUtilParams()
+	);
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
@@ -92,8 +99,8 @@ void initialize() {
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
 	scr->startTask("screenTask");
 
-	GUI::Selector* iselector = std::dynamic_cast<GUI::Selector*>(
-		scr->makePage<GUI::Selector>("Selector")
+	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
+	    &scr->makePage<GUI::Selector>("Selector")
 /*			.button("Red Big",   [&]() { routines.at("redBig")(); })
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
@@ -105,13 +112,15 @@ void initialize() {
 	pros::delay(10);
 	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
 
-/*	scr->makePage<GUI::Graph>("Temp")
+//*	
+	scr->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
 		.withResolution(100)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor(); });//*/
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); }
+	);//*/
 
 }
 
