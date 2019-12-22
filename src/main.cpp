@@ -25,7 +25,7 @@ std::shared_ptr<Controller> master;
 std::shared_ptr<GUI::Screen> scr;
 GUI::Selector* selector;
 
-//std::map<std::string, std::function<void()>&> routines;
+std::map<std::string, std::function<void()>&> routines;
 
 std::string routine;
 
@@ -79,43 +79,43 @@ void initialize() {
 	trayController10->flipDisable(true);
 
 	master = std::make_shared<Controller>();
-/*
-	routines["redBig"] = [&](){
+
+	routines.at("redBig") =[&](){
 		printf("redBig");
 	};
-	routines["redSmall"] = [&](){
+	routines.at("redSmall") = [&](){
 		printf("redSmall");
 	};
-	routines["blueBig"] = [&](){
+	routines.at("blueBig") = [&](){
 		printf("blueBig");
 	};
-	routines["blueSmall"] = [&](){
+	routines.at("blueSmall") = [&](){
 		printf("blueSmall");
 	};
-//*/
+
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
 	scr->startTask("screenTask");
 
 	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
     	&scr->makePage<GUI::Selector>("Selector")
-/*			.button("Red Big",   [&]() { routines.at("redBig")(); })
+			.button("Red Big",   [&]() { routines.at("redBig")(); })
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
-			.button("Blue Big", [&]()   { routines.at("blueBig")(); })//*/
-			.button("Blue Small", [&]() { printf("yee"); })
+			.button("Blue Big", [&]()   { routines.at("blueBig")(); })
+			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
 			.build()
 		);
 	
 	pros::delay(10);
 	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
 
-/*	scr->makePage<GUI::Graph>("Temp")
+	scr->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
 		.withResolution(100)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor(); });//*/
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
 
 }
 
@@ -171,16 +171,16 @@ void taskFnc(void*){
 		//DRIVE
 		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
 			master->clearLine(1);
-			out = "IntkTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
+			out = "DrveTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
 			master->setText(1,0,out.c_str());
 		}else if(model->getLeftSideMotor()->getTemperature()>=maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
 			master->clearLine(1);
-			master->setText(1,0,"Intk Over Temp");
+			master->setText(1,0,"Drve Over Temp");
 			master->rumble("- -");
 			pros::delay(500);
 		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
 			master->clearLine(1);
-			master->setText(1,0,"Intk Over Crnt");
+			master->setText(1,0,"Drve Over Crnt");
 			master->rumble("- -");
 			pros::delay(500);
 		}
