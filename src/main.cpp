@@ -16,8 +16,6 @@ std::shared_ptr<CustomOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
-//std::shared_ptr<AsyncPosPIDController> trayController;
-//std::shared_ptr<AsyncPosPIDController> trayController4;
 std::shared_ptr<AsyncPosPIDController> trayController7;
 std::shared_ptr<AsyncPosPIDController> trayController10;
 std::shared_ptr<Controller> master;
@@ -35,14 +33,14 @@ void initialize() {
 	chassis = ChassisControllerBuilder()
 		.withMotors({2,3},{-9,-10})
 		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({12.5_in, 3.25_in, 0_in, 2.75_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
 	odom = std::make_shared<CustomOdometry>(
 		model, 
-		ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR),
+		chassis->getChassisScales(),
 		TimeUtilFactory::withSettledUtilParams()
 	);
 
@@ -72,7 +70,7 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(),
 		.0004,
 		.0000,
-		.0000,
+		.00005,
 		.0
 	);
 	trayController10->startThread();
@@ -116,7 +114,6 @@ void initialize() {
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
 		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
-
 }
 
 void disabled() {}
@@ -124,7 +121,7 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-//	selector->run();
+	selector->run();
 }
 
 void taskFnc(void*){
