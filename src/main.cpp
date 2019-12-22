@@ -35,12 +35,16 @@ void initialize() {
 	chassis = ChassisControllerBuilder()
 		.withMotors({2,3},{-9,-10})
 		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-//		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
-	odom = std::make_shared<CustomOdometry>(model, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR));
+	odom = std::make_shared<CustomOdometry>(
+		model, 
+		ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR),
+		TimeUtilFactory::withSettledUtilParams()
+	);
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
@@ -92,8 +96,8 @@ void initialize() {
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
 	scr->startTask("screenTask");
 
-	GUI::Selector* iselector = std::dynamic_cast<GUI::Selector*>(
-		scr->makePage<GUI::Selector>("Selector")
+	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
+    	&scr->makePage<GUI::Selector>("Selector")
 /*			.button("Red Big",   [&]() { routines.at("redBig")(); })
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
