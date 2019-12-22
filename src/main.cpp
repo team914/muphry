@@ -16,8 +16,6 @@ std::shared_ptr<CustomOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
-//std::shared_ptr<AsyncPosPIDController> trayController;
-//std::shared_ptr<AsyncPosPIDController> trayController4;
 std::shared_ptr<AsyncPosPIDController> trayController7;
 std::shared_ptr<AsyncPosPIDController> trayController10;
 std::shared_ptr<Controller> master;
@@ -33,19 +31,29 @@ void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
 
 	chassis = ChassisControllerBuilder()
+<<<<<<< HEAD
 		.withMotors(2,3,-9,-10)
 //		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
 		.withDimensions( AbstractMotor::gearset::green, ChassisScales({10.2101761242_in, 3.25_in}, imev5GreenTPR) )
+=======
+		.withMotors({2,3},{-9,-10})
+		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({12.5_in, 3.25_in, 0_in, 2.75_in}, imev5GreenTPR) )
+>>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		.build();
 
 	model = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
 
 	odom = std::make_shared<CustomOdometry>(
 		model, 
+<<<<<<< HEAD
 		ChassisScales(
 			{10.2101761242_in, 3.25_in,10.2101761242_in, 3.25_in}, 
 			imev5GreenTPR
 		),
+=======
+		chassis->getChassisScales(),
+>>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		TimeUtilFactory::withSettledUtilParams()
 	);
 
@@ -75,7 +83,7 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(),
 		.0004,
 		.0000,
-		.0000,
+		.00005,
 		.0
 	);
 	trayController10->startThread();
@@ -83,18 +91,23 @@ void initialize() {
 
 	master = std::make_shared<Controller>();
 
+<<<<<<< HEAD
 	routines["redBig"] = [&](){
+=======
+	routines.at("redBig") =[&](){
+>>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 		printf("redBig");
 	};
-	routines["redSmall"] = [&](){
+	routines.at("redSmall") = [&](){
 		printf("redSmall");
 	};
-	routines["blueBig"] = [&](){
+	routines.at("blueBig") = [&](){
 		printf("blueBig");
 	};
-	routines["blueSmall"] = [&](){
+	routines.at("blueSmall") = [&](){
 		printf("blueSmall");
 	};
+<<<<<<< HEAD
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	scr->startTask("screenTask");
 
@@ -104,6 +117,18 @@ void initialize() {
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
 			.button("Blue Big", [&]()   { routines.at("blueBig")(); })//*/
+=======
+
+	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
+	scr->startTask("screenTask");
+
+	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
+    	&scr->makePage<GUI::Selector>("Selector")
+			.button("Red Big",   [&]() { routines.at("redBig")(); })
+			.button("Red Small", [&]() { routines.at("redSmall")(); })
+			.newRow()
+			.button("Blue Big", [&]()   { routines.at("blueBig")(); })
+>>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
 			.build()
 		);
@@ -117,9 +142,13 @@ void initialize() {
 		.withResolution(100)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
+<<<<<<< HEAD
 		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); }
 	);//*/
 
+=======
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
+>>>>>>> ca6660dbe6e8e647341a638067556c2accbe033c
 }
 
 void disabled() {}
@@ -127,7 +156,7 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-//	selector->run();
+	selector->run();
 }
 
 void taskFnc(void*){
@@ -174,16 +203,16 @@ void taskFnc(void*){
 		//DRIVE
 		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
 			master->clearLine(1);
-			out = "IntkTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
+			out = "DrveTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
 			master->setText(1,0,out.c_str());
 		}else if(model->getLeftSideMotor()->getTemperature()>=maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
 			master->clearLine(1);
-			master->setText(1,0,"Intk Over Temp");
+			master->setText(1,0,"Drve Over Temp");
 			master->rumble("- -");
 			pros::delay(500);
 		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
 			master->clearLine(1);
-			master->setText(1,0,"Intk Over Crnt");
+			master->setText(1,0,"Drve Over Crnt");
 			master->rumble("- -");
 			pros::delay(500);
 		}
