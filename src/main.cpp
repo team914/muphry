@@ -25,7 +25,7 @@ std::shared_ptr<Controller> master;
 std::shared_ptr<GUI::Screen> scr;
 GUI::Selector* selector;
 
-//std::map<std::string, std::function<void()>&> routines;
+std::map<std::string, std::function<void()>&> routines;
 
 std::string routine;
 
@@ -82,7 +82,7 @@ void initialize() {
 	trayController10->flipDisable(true);
 
 	master = std::make_shared<Controller>();
-/*
+
 	routines["redBig"] = [&](){
 		printf("redBig");
 	};
@@ -95,24 +95,22 @@ void initialize() {
 	routines["blueSmall"] = [&](){
 		printf("blueSmall");
 	};
-//*/
-	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
+	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	scr->startTask("screenTask");
 
 	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
 	    &scr->makePage<GUI::Selector>("Selector")
-/*			.button("Red Big",   [&]() { routines.at("redBig")(); })
+			.button("Red Big",   [&]() { routines.at("redBig")(); })
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
 			.button("Blue Big", [&]()   { routines.at("blueBig")(); })//*/
-			.button("Blue Small", [&]() { printf("yee"); })
+			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
 			.build()
 		);
 	
 	pros::delay(10);
 	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
 
-//*	
 	scr->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
