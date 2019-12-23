@@ -32,16 +32,16 @@ void initialize() {
 
 	chassis = ChassisControllerBuilder()
 		.withMotors({2,3},{-9,-10})
-		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
+		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true))
 		.withDimensions( AbstractMotor::gearset::green, ChassisScales({12.5_in, 3.25_in, 0_in, 2.75_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
 	odom = std::make_shared<CustomOdometry>(
-		model, 
+		model,
 		chassis->getChassisScales(),
-		TimeUtilFactory::withSettledUtilParams()
+		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
@@ -76,9 +76,19 @@ void initialize() {
 	trayController10->startThread();
 	trayController10->flipDisable(true);
 
-	master = std::make_shared<Controller>();
+	trayController7->setOutputLimits(3025,2600);
+	trayController10->setOutputLimits(3025,2600);
 
-	routines.at("redBig") =[&](){
+	master = std::make_shared<Controller>();
+	master->setText(0,0,"initialize");
+//*
+	routines.at("test") = [&](){
+		chassis->moveDistance(24_in);
+		pros::delay(500);
+		chassis->moveDistance(-24_in);
+		pros::delay(500);
+	};
+	routines.at("redBig") = [&](){
 		printf("redBig");
 	};
 	routines.at("redSmall") = [&](){
@@ -91,11 +101,16 @@ void initialize() {
 		printf("blueSmall");
 	};
 
-	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
+	routine = "test";
+
+	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	scr->startTask("screenTask");
 
 	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
     	&scr->makePage<GUI::Selector>("Selector")
+			.button("Default", [&]() { routines.at(routine)(); })
+			.button("Test", [&]() { routines.at("test")(); })
+			.newRow()
 			.button("Red Big",   [&]() { routines.at("redBig")(); })
 			.button("Red Small", [&]() { routines.at("redSmall")(); })
 			.newRow()
@@ -110,10 +125,10 @@ void initialize() {
 	scr->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
-		.withResolution(100)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
 		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
+//*/	
 }
 
 void disabled() {}
@@ -121,7 +136,7 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-	selector->run();
+//	selector->run();
 }
 
 void taskFnc(void*){
@@ -224,8 +239,8 @@ void opcontrol() {
 		}
 
 		//TRAY
-		const double trayUp = 2000;
-		const double trayDown = -50;
+		const double trayUp = 2000;  //tray internal encoder 2000
+		const double trayDown = -50; //tray internal encoder -50
 		if(master->getDigital(ControllerDigital::L1)){
 			//trayController7
 			trayController10->flipDisable(true);
