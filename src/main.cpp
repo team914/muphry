@@ -29,19 +29,13 @@ std::string routine;
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
-/*
-	Logger::setDefaultLogger(
-		std::make_shared<Logger>(
-			TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
-			"/usd/log.txt", // Output to the PROS terminal
-			Logger::LogLevel::debug
-		)
-	);//*/
+
+	printf("init start\n");
 
 	chassis = ChassisControllerBuilder()
 		.withMotors({2,3},{-9,-10})
-		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true), ADIEncoder(4,5))
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({3.25_in, 12.5_in, 0_in, 2.75_in}, imev5GreenTPR) )
+		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true))
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({3.25_in, 12.5_in, 0.1_in, 2.75_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
@@ -89,7 +83,7 @@ void initialize() {
 
 	master = std::make_shared<Controller>();
 	master->setText(0,0,"initialize");
-//*
+/*
 	routines.at("test") = [&](){
 		chassis->moveDistance(24_in);
 		pros::delay(500);
@@ -110,7 +104,8 @@ void initialize() {
 	};
 
 	routine = "test";
-
+//*/
+//*
 	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 
 	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
@@ -135,8 +130,11 @@ void initialize() {
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
 		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
-
+		
 	scr->startTask("screenTask");
+
+//*/
+	printf("init end\n");
 
 }
 
