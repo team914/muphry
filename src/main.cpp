@@ -29,11 +29,12 @@ std::string routine;
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
+	printf("init\n");
 
 	chassis = ChassisControllerBuilder()
-		.withMotors(2,3,-9,-10)
+		.withMotors(2,-9,-8,3)
 		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({12.5_in, 3.25_in, 0_in, 2.75_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({3.25_in, 7.25_in, 0.1_in, 2.75_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
@@ -43,11 +44,11 @@ void initialize() {
 		chassis->getChassisScales(),
 		TimeUtilFactory::withSettledUtilParams()
 	);
-
+/*
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
-	intake->setGearing(AbstractMotor::gearset::red);
+	intake->setGearing(AbstractMotor::gearset::red);//*/
 
-	lift = std::make_shared<MotorGroup>(MotorGroup({1}));
+	lift = std::make_shared<MotorGroup>(MotorGroup({6}));
 	lift->setGearing(AbstractMotor::gearset::red);
 
 /*
@@ -80,49 +81,21 @@ void initialize() {
 
 	master = std::make_shared<Controller>();
 
-	routines.at("redBig") =[&](){
-		printf("redBig");
-	};
-	routines.at("redSmall") = [&](){
-		printf("redSmall");
-	};
-	routines.at("blueBig") = [&](){
-		printf("blueBig");
-	};
-	routines.at("blueSmall") = [&](){
-		printf("blueSmall");
-	};
-
-	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_GREEN );
-	scr->startTask("screenTask");
-
-	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
-    	&scr->makePage<GUI::Selector>("Selector")
-			.button("Red Big",   [&]() { routines.at("redBig")(); })
-			.button("Red Small", [&]() { routines.at("redSmall")(); })
-			.newRow()
-			.button("Blue Big", [&]()   { routines.at("blueBig")(); })
-			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
-			.build()
-		);
-	
-	pros::delay(10);
-	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
-
-	scr->makePage<GUI::Graph>("Temp")
-		.withRange(0,100)
-		.withGrid(2,4)
-		.withResolution(100)
-		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
-		.withSeries("lift", LV_COLOR_MAKE(239,71,111), []() { return lift->getTemperature(); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getTopLeftMotor()->getTemperature(); });
 }
 
-void disabled() {}
+void disabled() {
+	printf("disabled\n");
 
-void competition_initialize() {}
+}
+
+void competition_initialize() {
+	printf("comp init\n");
+
+}
 
 void autonomous() {
+	printf("auto\n");
+
 	selector->run();
 }
 
@@ -152,6 +125,7 @@ void taskFnc(void*){
 			pros::delay(500);
 		}
 		//INTAKE
+		/*
 		if(intake->getTemperature()<maxTemp && !intake->isOverCurrent()){
 			master->clearLine(1);
 			out = "IntkTmp" + std::to_string(intake->getTemperature());
@@ -166,7 +140,7 @@ void taskFnc(void*){
 			master->setText(1,0,"Intk Over Crnt");
 			master->rumble("- -");
 			pros::delay(500);
-		}
+		}//*/
 		//DRIVE
 		if(model->getTopLeftMotor()->getTemperature()<maxTemp && !model->getTopLeftMotor()->isOverCurrent()){
 			master->clearLine(1);
@@ -187,6 +161,8 @@ void taskFnc(void*){
 }
 
 void opcontrol() {
+	printf("opcontrol\n");
+
 	pros::Task task( taskFnc, NULL, "taskFnc" );
 	bool intakeToggle = false;
 
