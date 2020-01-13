@@ -138,7 +138,9 @@ void initialize() {
 
 }
 
-void disabled() {}
+void disabled() {
+	chassis->stop();
+}
 
 void competition_initialize() {}
 
@@ -207,6 +209,7 @@ void taskFnc(void*){
 }
 
 void opcontrol() {
+	chassis->stop();
 	pros::Task task( taskFnc, NULL, "taskFnc" );
 	bool intakeToggle = false;
 
