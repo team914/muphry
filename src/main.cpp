@@ -16,8 +16,7 @@ std::shared_ptr<TwoEncoderOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
-std::shared_ptr<AsyncPosPIDController> trayController7;
-std::shared_ptr<AsyncPosPIDController> trayController10;
+std::shared_ptr<AsyncPosPIDController> trayController;
 std::shared_ptr<Controller> master;
 
 std::shared_ptr<GUI::Screen> screen;
@@ -32,14 +31,14 @@ void initialize() {
 	master->setText(0,0,"initialize");
 
 	chassis = ChassisControllerBuilder()
-		.withMotors({2,3},{-9,-10})
-		.withSensors( ADIEncoder(1,2),ADIEncoder(7,8, true) )
+		.withMotors({1,2},{-9,-20})
+		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
 		.withGains(
-			IterativePosPIDController::Gains{.0030,.0000,.0000,.00},
+			IterativePosPIDController::Gains{.002,.0000,.00003,.00},
 			IterativePosPIDController::Gains{.0035,.0000,.00015,.00},
-			IterativePosPIDController::Gains{.0030,.0000,.0000,.00}
+			IterativePosPIDController::Gains{.00/*30*/,.0000,.0000,.00}
 		)
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .1_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .0001_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
@@ -59,34 +58,22 @@ void initialize() {
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
 
-	tray = std::make_shared<MotorGroup>(MotorGroup({-1}));
+	tray = std::make_shared<MotorGroup>(MotorGroup({17}));
 	tray->setGearing(AbstractMotor::gearset::red);
 
-	trayPotent = std::make_shared<Potentiometer>(3);
+	trayPotent = std::make_shared<Potentiometer>(6);
 
-	trayController7 = std::make_shared<AsyncPosPIDController>(
+	trayController = std::make_shared<AsyncPosPIDController>(
 		trayPotent,
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.001,
+		.0007,
 		.0000,
 		.000,
 		.0
 	);
-	trayController7->startThread();
-	trayController7->flipDisable(true);
-
-	trayController10 = std::make_shared<AsyncPosPIDController>(
-		trayPotent,
-		tray,
-		TimeUtilFactory::withSettledUtilParams(),
-		.0004,
-		.0000,
-		.0005,
-		.0
-	);
-	trayController10->startThread();
-	trayController10->flipDisable(true);
+	trayController->startThread();
+	trayController->flipDisable(true);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	screen->startTask("screenTask");
@@ -94,9 +81,8 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() { 
-				#define TUR
+				#define TURN
 				odom->setState(OdomState{7_ft,2_ft,90_deg});
-				model->setMaxVelocity(200);
 				#ifdef TURN
 				auto angle = 90_deg;
 				chassis->turnAngle(angle);
@@ -168,6 +154,7 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
+	model->setMaxVelocity(150);
 	model->resetSensors();
 	selector->run();
 }
@@ -273,28 +260,28 @@ void opcontrol() {
 		}
 
 		//TRAY
-		const double trayUp = 2625;  //tray internal encoder 2000
-		const double trayDown = 3650; //tray internal encoder -50
+		const double trayUp = .41 * 4095;   //old potentiometer 2625 //tray internal encoder 2000
+		const double trayDown = .0001 * 4095; //old potentiometer 3650 //tray internal encoder -50
 		if(master->getDigital(ControllerDigital::L1)){
-			//trayController7
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(false);
-			trayController7->setTarget(trayUp);
+			//trayController up
+			trayController->flipDisable(false);
+			trayController->setTarget(trayUp);
 		}else if(master->getDigital(ControllerDigital::L2)){
 			//go back down
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(true);
-			tray->moveVelocity(100);
+			trayController->flipDisable(true);
+			while(master->getDigital(ControllerDigital::L2)){
+				tray->moveVelocity(-100);
+				pros::delay(20);
+			}
+			tray->moveVelocity(0);
+			trayController->flipDisable(false);
+			trayController->setTarget(trayDown);
 		}else if(master->getDigital(ControllerDigital::right)){
-			//trayController10
-			trayController7->flipDisable(true);
-			trayController10->flipDisable(false);
-			trayController10->setTarget(trayUp);
+			//nothing
 		}else if(master->getDigital(ControllerDigital::down)){
 			//nothing
 		}else if(master->getDigital(ControllerDigital::Y)){
-			trayController7->setTarget(trayDown);
-			trayController10->setTarget(trayDown);
+			trayController->setTarget(trayDown);
 			while(master->getDigital(ControllerDigital::Y)){
 				intake->moveVelocity(-100);
 			}
