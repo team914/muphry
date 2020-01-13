@@ -12,132 +12,141 @@ using namespace okapi;
 
 std::shared_ptr<ChassisController> chassis;
 std::shared_ptr<SkidSteerModel> model;
-std::shared_ptr<CustomOdometry> odom;
+std::shared_ptr<TwoEncoderOdometry> odom;
 std::shared_ptr<MotorGroup> intake;
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
-std::shared_ptr<AsyncPosPIDController> trayController7;
-std::shared_ptr<AsyncPosPIDController> trayController10;
+std::shared_ptr<AsyncPosPIDController> trayController;
 std::shared_ptr<Controller> master;
 
-std::shared_ptr<GUI::Screen> scr;
+std::shared_ptr<GUI::Screen> screen;
+
 GUI::Selector* selector;
-
-std::map<std::string, std::function<void()>&> routines;
-
-std::string routine;
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
-/*
-	Logger::setDefaultLogger(
-		std::make_shared<Logger>(
-			TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
-			"/usd/log.txt", // Output to the PROS terminal
-			Logger::LogLevel::debug
-		)
-	);//*/
+	printf("init\n");
+
+	master = std::make_shared<Controller>();
+	master->setText(0,0,"initialize");
 
 	chassis = ChassisControllerBuilder()
-		.withMotors({2,3},{-9,-10})
-		.withSensors( ADIEncoder(7,8), ADIEncoder(1,2,true), ADIEncoder(4,5))
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({3.25_in, 12.5_in, 0_in, 2.75_in}, imev5GreenTPR) )
+		.withMotors({1,2},{-9,-20})
+		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
+		.withGains(
+			IterativePosPIDController::Gains{.002,.0000,.00003,.00},
+			IterativePosPIDController::Gains{.0035,.0000,.00015,.00},
+			IterativePosPIDController::Gains{.00/*30*/,.0000,.0000,.00}
+		)
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .0001_in}, imev5GreenTPR) )
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
-	odom = std::make_shared<CustomOdometry>(
+	/*odom = std::make_shared<CustomOdometry>(
 		model,
 		chassis->getChassisScales(),
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
-	);
+	);//*/
+
+	odom = std::make_shared<TwoEncoderOdometry>(
+		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
+		model,
+		chassis->getChassisScales()
+	);//*/
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
 
-	tray = std::make_shared<MotorGroup>(MotorGroup({1}));
+	tray = std::make_shared<MotorGroup>(MotorGroup({17}));
 	tray->setGearing(AbstractMotor::gearset::red);
 
-	trayPotent = std::make_shared<Potentiometer>(3);
+	trayPotent = std::make_shared<Potentiometer>(6);
 
-	trayController7 = std::make_shared<AsyncPosPIDController>(
-		tray->getEncoder(),
+	trayController = std::make_shared<AsyncPosPIDController>(
+		trayPotent,
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.0004,
+		.0007,
 		.0000,
-		.00007,
+		.000,
 		.0
 	);
-	trayController7->startThread();
-	trayController7->flipDisable(true);
+	trayController->startThread();
+	trayController->flipDisable(true);
 
-	trayController10 = std::make_shared<AsyncPosPIDController>(
-		tray->getEncoder(),
-		tray,
-		TimeUtilFactory::withSettledUtilParams(),
-		.0004,
-		.0000,
-		.00005,
-		.0
-	);
-	trayController10->startThread();
-	trayController10->flipDisable(true);
+	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
+	screen->startTask("screenTask");
 
-	trayController7->setOutputLimits(3025,2600);
-	trayController10->setOutputLimits(3025,2600);
-
-	master = std::make_shared<Controller>();
-	master->setText(0,0,"initialize");
-//*
-	routines.at("test") = [&](){
-		chassis->moveDistance(24_in);
-		pros::delay(500);
-		chassis->moveDistance(-24_in);
-		pros::delay(500);
-	};
-	routines.at("redBig") = [&](){
-		printf("redBig");
-	};
-	routines.at("redSmall") = [&](){
-		printf("redSmall");
-	};
-	routines.at("blueBig") = [&](){
-		printf("blueBig");
-	};
-	routines.at("blueSmall") = [&](){
-		printf("blueSmall");
-	};
-
-	routine = "test";
-
-	scr = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
-
-	GUI::Selector* iselector = dynamic_cast<GUI::Selector*>(
-    	&scr->makePage<GUI::Selector>("Selector")
-			.button("Default", [&]() { routines.at(routine)(); })
-			.button("Test", [&]() { routines.at("test")(); })
+	selector = dynamic_cast<GUI::Selector*>(
+    	&screen->makePage<GUI::Selector>("Selector")
+			.button("Default", [&]() { 
+				#define TURN
+				odom->setState(OdomState{7_ft,2_ft,90_deg});
+				#ifdef TURN
+				auto angle = 90_deg;
+				chassis->turnAngle(angle);
+				pros::delay(500);
+				chassis->turnAngle(-angle);
+				pros::delay(500);
+				#endif
+				#ifndef TURN
+				auto distance = 24_in;
+				chassis->moveDistance(distance);
+				pros::delay(500);
+				chassis->moveDistance(-distance);
+				pros::delay(500);
+				#endif
+			})
+			.button("Test", [&]() { 
+				chassis->moveDistance(24_in);
+				pros::delay(500);
+				chassis->moveDistance(-24_in);
+				pros::delay(500);
+			 })
 			.newRow()
-			.button("Red Big",   [&]() { routines.at("redBig")(); })
-			.button("Red Small", [&]() { routines.at("redSmall")(); })
+			.button("Red Big",   [&]() { 
+				printf("redBig");
+			 })
+			.button("Red Small", [&]() { 
+				printf("redSmall");
+			 })
 			.newRow()
-			.button("Blue Big", [&]()   { routines.at("blueBig")(); })
-			.button("Blue Small", [&]() { routines.at("blueSmall")(); })
+			.button("Blue Big", [&]()   { 
+				printf("blueBig");
+			 })
+			.button("Blue Small", [&]() { 
+				printf("blueSmall");
+			 })
 			.build()
 		);
-	
-	pros::delay(10);
-	scr->makePage<GUI::Odom>().attachOdom(odom).attachResetter([&]() { model->resetSensors(); });
 
-	scr->makePage<GUI::Graph>("Temp")
+	pros::delay(10);
+	screen->makePage<GUI::Odom>("Odom")
+		.attachOdom(odom)
+		.attachResetter([&](){
+			model->resetSensors();
+		});
+
+//*
+	screen->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
-		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); })
-		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); });
+		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); pros::delay(100); })
+		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); pros::delay(100); })
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); pros::delay(100); });
 
-	scr->startTask("screenTask");
+	screen->makePage<GUI::Graph>("Sensors")
+		.withResolution(100)
+		.withRange(0,4096)
+		.withGrid(16,1)
+		.withSeries("TrayPotent", LV_COLOR_MAKE(6,214,160), [](){ return trayPotent->controllerGet(); })
+		.withSeries("TrayController7", LV_COLOR_MAKE(239,71,111), [](){ return trayPotent->controllerGet(); })
+		;
 
+//*/
+	master->setText(0,11,"end");
+	printf("init end\n");
 }
 
 void disabled() {}
@@ -145,7 +154,9 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-//	selector->run();
+	model->setMaxVelocity(150);
+	model->resetSensors();
+	selector->run();
 }
 
 void taskFnc(void*){
@@ -156,7 +167,6 @@ void taskFnc(void*){
 		//Drve Optimal || Drve Over Temp || Drve Over Crnt || Drve WARNING	
 
 		const double maxTemp = 60;
-
 		//TRAY
 		if(tray->getTemperature()<maxTemp && !tray->isOverCurrent()){
 			master->clearLine(0);
@@ -205,16 +215,18 @@ void taskFnc(void*){
 			master->rumble("- -");
 			pros::delay(500);
 		}
+		pros::delay(20);
 	}
 }
 
 void opcontrol() {
+	master->setText(0,1,"opcontrol");	
 	pros::Task task( taskFnc, NULL, "taskFnc" );
 	bool intakeToggle = false;
 
 	while (true) {
 		double left;
-		double right;
+		double right;			
 		if( std::abs(master->getAnalog(ControllerAnalog::rightY)) <= .1){
 			left = master->getAnalog(ControllerAnalog::leftX);
 			right = -master->getAnalog(ControllerAnalog::leftX);			
@@ -248,28 +260,28 @@ void opcontrol() {
 		}
 
 		//TRAY
-		const double trayUp = 2000;  //tray internal encoder 2000
-		const double trayDown = -50; //tray internal encoder -50
+		const double trayUp = .41 * 4095;   //old potentiometer 2625 //tray internal encoder 2000
+		const double trayDown = .0001 * 4095; //old potentiometer 3650 //tray internal encoder -50
 		if(master->getDigital(ControllerDigital::L1)){
-			//trayController7
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(false);
-			trayController7->setTarget(trayUp);
+			//trayController up
+			trayController->flipDisable(false);
+			trayController->setTarget(trayUp);
 		}else if(master->getDigital(ControllerDigital::L2)){
 			//go back down
-			trayController10->flipDisable(true);
-			trayController7->flipDisable(true);
-			tray->moveVelocity(-100);
+			trayController->flipDisable(true);
+			while(master->getDigital(ControllerDigital::L2)){
+				tray->moveVelocity(-100);
+				pros::delay(20);
+			}
+			tray->moveVelocity(0);
+			trayController->flipDisable(false);
+			trayController->setTarget(trayDown);
 		}else if(master->getDigital(ControllerDigital::right)){
-			//trayController10
-			trayController7->flipDisable(true);
-			trayController10->flipDisable(false);
-			trayController10->setTarget(trayUp);
+			//nothing
 		}else if(master->getDigital(ControllerDigital::down)){
 			//nothing
 		}else if(master->getDigital(ControllerDigital::Y)){
-			trayController7->setTarget(trayDown);
-			trayController10->setTarget(trayDown);
+			trayController->setTarget(trayDown);
 			while(master->getDigital(ControllerDigital::Y)){
 				intake->moveVelocity(-100);
 			}
