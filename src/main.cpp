@@ -12,17 +12,42 @@ using namespace okapi;
 
 std::shared_ptr<ChassisController> chassis;
 std::shared_ptr<SkidSteerModel> model;
+std::shared_ptr<DefaultOdomChassisController> controller;
 std::shared_ptr<TwoEncoderOdometry> odom;
-std::shared_ptr<OdomController> controller;
+
 std::shared_ptr<MotorGroup> intake;
+
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
 std::shared_ptr<AsyncPosPIDController> trayController;
+
 std::shared_ptr<Controller> master;
 
 std::shared_ptr<GUI::Screen> screen;
 
 GUI::Selector* selector;
+
+const double trayUp{.41 * 4095};
+const double trayDown{.0001 * 4095};
+
+void unfold(){
+	trayController->startThread();
+	tray->moveVelocity(100);
+	intake->moveVelocity(-100);
+	pros::delay(1000);
+	tray->moveVelocity(-100);
+	pros::delay(250);
+
+	chassis->moveDistanceAsync(30_in);
+	chassis->waitUntilSettled();
+	
+	intake->moveVelocity(0);
+	chassis->moveDistanceAsync(-6_in);
+
+	intake->moveVelocity(100);
+	chassis->waitUntilSettled();
+
+}
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
@@ -31,35 +56,48 @@ void initialize() {
 	master = std::make_shared<Controller>();
 	master->setText(0,0,"initialize");
 
-	chassis = ChassisControllerBuilder()
+	controller = std::dynamic_pointer_cast<DefaultOdomChassisController>(
+	ChassisControllerBuilder()
 		.withMotors({1,2},{-9,-20})
 		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .0001_in}, imev5GreenTPR) )
-		.build();
+//		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 29.34_in, 2.75_in, .0001_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 29.34_in, 2.75_in, .0001_in}, imev5GreenTPR) )
+		.withGains(
+			IterativePosPIDController::Gains{.002,.0015,.00003,.00},
+			IterativePosPIDController::Gains{.0017,.0000,.00003,.00},
+			IterativePosPIDController::Gains{.0015,.0000,.0000,.00}
+		)
+		.withClosedLoopControllerTimeUtil(10,5,500_ms)
+		.buildOdometry());
+
+	controller->startOdomThread();
+
+	chassis = std::dynamic_pointer_cast<ChassisController>(controller->getChassisController());
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
 
+	//*
 	odom = std::make_shared<TwoEncoderOdometry>(
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
 		model,
 		chassis->getChassisScales()
-	);
+	);//*/
 
-	controller = std::make_shared<OdomController>(
+	/*std::make_shared<OdomChassisController>(
 		model,
 		odom,
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.002,.0000,.00003,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+			{.001,.0015,.00003,.00},
+			TimeUtilFactory::withSettledUtilParams(100, 5, 100_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0035,.0000,.00015,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+			{.001,.0000,.00003,.00},
+			TimeUtilFactory::withSettledUtilParams(10, 5, 100_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.00/*30*/,.0000,.00003,.00},
+			{.0015,.0000,.0000,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
-		2_in,
+		1_ft,
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
-	);
+	);//*/
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
@@ -73,63 +111,70 @@ void initialize() {
 		trayPotent,
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.0007,
+		.0005,
 		.0000,
 		.000,
 		.0
 	);
 	trayController->startThread();
 	trayController->flipDisable(true);
-
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	screen->startTask("screenTask");
 
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
-			.button("Default", [&]() { 
-				#define TURN
-				odom->setState(OdomState{7_ft,2_ft,90_deg});
+			.button("Default", [&]() {
+				chassis->moveDistance(24_in);
+				chassis->turnAngle(180_deg);
+			})
+			.button("Test", [&]() { 
+//				#define TURN
 				#ifdef TURN
 				auto angle = 90_deg;
-				controller->turnAngle(angle);
+				chassis->turnAngle(angle);
 				pros::delay(500);
-				controller->turnAngle(-angle);
+				chassis->turnAngle(-angle);
 				pros::delay(500);
 				#endif
 				#ifndef TURN
 				auto distance = 24_in;
-				chassis->moveDistance(distance);
+				controller->moveDistance(distance);
 				pros::delay(500);
-				chassis->moveDistance(-distance);
+				controller->moveDistance(-distance);
 				pros::delay(500);
 				#endif
-			})
-			.button("Test", [&]() { 
-				chassis->moveDistance(24_in);
-				pros::delay(500);
-				chassis->moveDistance(-24_in);
-				pros::delay(500);
 			 })
 			.newRow()
 			.button("Red Big",   [&]() { 
 				printf("redBig");
+				unfold();
 			 })
 			.button("Red Small", [&]() { 
 				printf("redSmall");
+				unfold();
 			 })
 			.newRow()
 			.button("Blue Big", [&]()   { 
 				printf("blueBig");
+//				unfold();
+				intake->moveVelocity(100);
+				chassis->moveDistance(15_in);
+				chassis->turnAngle(90_deg);
+				chassis->moveDistance(24_in);
+				chassis->turnAngle(90_deg);
+				chassis->moveDistance(24_in);
+				chassis->turnAngle(-90_deg);
 			 })
 			.button("Blue Small", [&]() { 
 				printf("blueSmall");
+				unfold();
 			 })
 			.build()
 		);
 
 	pros::delay(10);
 	screen->makePage<GUI::Odom>("Odom")
-		.attachOdom(odom)
+		.attachOdom()
 		.attachResetter([&](){
 			model->resetSensors();
 		});
@@ -270,8 +315,8 @@ void opcontrol() {
 		}
 
 		//TRAY
-		const double trayUp = .41 * 4095;   //old potentiometer 2625 //tray internal encoder 2000
-		const double trayDown = .0001 * 4095; //old potentiometer 3650 //tray internal encoder -50
+		const double trayUp{.41 * 4095};
+		const double trayDown{0001 * 4095};
 		if(master->getDigital(ControllerDigital::L1)){
 			//trayController up
 			trayController->flipDisable(false);
@@ -283,9 +328,6 @@ void opcontrol() {
 				tray->moveVelocity(-100);
 				pros::delay(20);
 			}
-			tray->moveVelocity(0);
-			trayController->flipDisable(false);
-			trayController->setTarget(trayDown);
 		}else if(master->getDigital(ControllerDigital::right)){
 			//nothing
 		}else if(master->getDigital(ControllerDigital::down)){
