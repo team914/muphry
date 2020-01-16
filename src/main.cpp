@@ -11,18 +11,89 @@ using namespace lib7842;
 using namespace okapi;
 
 std::shared_ptr<ChassisController> chassis;
+std::shared_ptr<ChassisController> backwardChassis;
+
 std::shared_ptr<SkidSteerModel> model;
+std::shared_ptr<SkidSteerModel> backwardModel;
+
+
 std::shared_ptr<TwoEncoderOdometry> odom;
+std::shared_ptr<TwoEncoderOdometry> backwardOdom;
+
 std::shared_ptr<OdomController> controller;
+
 std::shared_ptr<MotorGroup> intake;
+
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
 std::shared_ptr<AsyncPosPIDController> trayController;
+std::shared_ptr<AsyncPosPIDController> viciousTrayController;
+
 std::shared_ptr<Controller> master;
 
 std::shared_ptr<GUI::Screen> screen;
 
 GUI::Selector* selector;
+
+void small(bool red = true){
+	viciousTrayController->flipDisable(false);
+	trayController->flipDisable(true);
+
+	//flipout
+	intake->moveVelocity(-100);
+	viciousTrayController->setTarget(.41*4095);
+	pros::delay(1000);
+	backwardChassis->waitUntilSettled();
+	intake->moveVelocity(0);
+	viciousTrayController->setTarget(.0001*4095);
+	pros::delay(500);
+
+	//grab 4 cubes
+	intake->moveVelocity(100);
+	backwardModel->setMaxVelocity(150);
+	backwardChassis->moveDistance(40_in);
+
+	//move back
+	backwardChassis->setMaxVelocity(200);
+	backwardChassis->moveDistanceAsync(-20_in);
+	pros::delay(1000);
+	intake->moveVelocity(0);
+	backwardChassis->waitUntilSettled();
+
+	//turn to zone
+	backwardModel->setMaxVelocity(150);
+	if(red){
+		backwardChassis->turnAngle(120_deg);
+	}else{
+		backwardChassis->turnAngle(-120_deg);
+	}
+	pros::delay(10);
+
+	//move to zone
+	backwardChassis->moveDistanceAsync(17_in);
+	intake->moveVelocity(-100);
+	pros::delay(500);
+	intake->moveVelocity(100);
+	pros::delay(500);
+	intake->moveVelocity(0);
+	backwardChassis->waitUntilSettled();
+
+	//stack
+	viciousTrayController->setTarget(.41*4095);
+	pros::delay(500);
+	intake->moveVelocity(100);
+	pros::delay(500);
+	intake->moveVelocity(0);
+	viciousTrayController->waitUntilSettled();
+
+	//move away
+	viciousTrayController->setTarget(.0001*4095);
+	backwardChassis->moveDistanceAsync(-18_in);
+	pros::delay(250);
+	intake->moveVelocity(-100);
+	backwardChassis->waitUntilSettled();
+	intake->moveVelocity(0);
+}
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
@@ -30,11 +101,18 @@ void initialize() {
 
 	master = std::make_shared<Controller>();
 	master->setText(0,0,"initialize");
-
+	
+	//*
 	chassis = ChassisControllerBuilder()
 		.withMotors({1,2},{-9,-20})
 		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
 		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .0001_in}, imev5GreenTPR) )
+		.withGains(
+			IterativePosPIDController::Gains{.002,.0015,.00003,.00},
+			IterativePosPIDController::Gains{.0017,.0000,.00003,.00},
+			IterativePosPIDController::Gains{.0015,.0000,.0000,.00}
+		)
+		.withClosedLoopControllerTimeUtil(10,5,500_ms)
 		.build();
 
 	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
@@ -43,8 +121,23 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
 		model,
 		chassis->getChassisScales()
+	);//*/
+
+	backwardChassis = ChassisControllerBuilder()
+		.withMotors({1,2},{-9,-20})
+//		.withSensors( ADIEncoder(7,8,false),ADIEncoder(1,2,true) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({(7.919/pi) * inch, 10.45_in}, imev5GreenTPR) )
+		.build();
+
+	backwardModel = std::dynamic_pointer_cast<SkidSteerModel>(backwardChassis->getModel());
+
+	backwardOdom = std::make_shared<TwoEncoderOdometry>(
+		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
+		backwardChassis->getModel(),
+		backwardChassis->getChassisScales()
 	);
 
+	/*
 	controller = std::make_shared<OdomController>(
 		model,
 		odom,
@@ -55,11 +148,11 @@ void initialize() {
 			{.0035,.0000,.00015,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.00/*30*/,.0000,.00003,.00},
+			{.00,.0000,.00003,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
 		2_in,
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
-	);
+	);//*/
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
 	intake->setGearing(AbstractMotor::gearset::red);
@@ -73,56 +166,152 @@ void initialize() {
 		trayPotent,
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.0007,
+		.00065,
 		.0000,
 		.000,
 		.0
 	);
 	trayController->startThread();
-	trayController->flipDisable(true);
+	trayController->flipDisable(false);
+
+	viciousTrayController = std::make_shared<AsyncPosPIDController>(
+		trayPotent,
+		tray,
+		TimeUtilFactory::withSettledUtilParams(),
+		.001,
+		.0000,
+		.000,
+		.0
+	);
+	viciousTrayController->startThread();
+	viciousTrayController->flipDisable(true);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	screen->startTask("screenTask");
 
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
-			.button("Default", [&]() { 
+			.button("Default", [&]() {
+				viciousTrayController->flipDisable(false);
+				trayController->flipDisable(true);
+				pros::delay(20);
+
+				viciousTrayController->controllerSet(.41*4095);
+				viciousTrayController->waitUntilSettled();
+				pros::delay(20);
+
+				viciousTrayController->controllerSet(.0001*4095);
+				viciousTrayController->waitUntilSettled();
+			})
+			.button("Test", [&]() { 
 				#define TURN
-				odom->setState(OdomState{7_ft,2_ft,90_deg});
 				#ifdef TURN
-				auto angle = 90_deg;
-				controller->turnAngle(angle);
+				auto angle = 360_deg;
+				chassis->turnAngle(angle);
 				pros::delay(500);
-				controller->turnAngle(-angle);
+				chassis->turnAngle(-angle);
 				pros::delay(500);
 				#endif
 				#ifndef TURN
 				auto distance = 24_in;
-				chassis->moveDistance(distance);
+				backwardChassis->moveDistance(distance);
 				pros::delay(500);
-				chassis->moveDistance(-distance);
+				backwardChassis->moveDistance(-distance);
 				pros::delay(500);
 				#endif
-			})
-			.button("Test", [&]() { 
-				chassis->moveDistance(24_in);
-				pros::delay(500);
-				chassis->moveDistance(-24_in);
-				pros::delay(500);
 			 })
 			.newRow()
 			.button("Red Big",   [&]() { 
 				printf("redBig");
+				backwardChassis->moveDistance(-5_in);
+				backwardChassis->moveDistance(10_in);
+				backwardChassis->turnAngle(67_deg);
 			 })
 			.button("Red Small", [&]() { 
 				printf("redSmall");
+				small();
 			 })
 			.newRow()
 			.button("Blue Big", [&]()   { 
+				backwardChassis->moveDistance(12_in);
+				backwardChassis->moveDistance(-14_in);
+
+				intake->moveVelocity(-100);
+				trayController->setTarget(.41*4095);
+				backwardChassis->moveDistanceAsync(3_in);
+				trayController->waitUntilSettled();
+				backwardChassis->waitUntilSettled();
+				intake->moveVelocity(0);
+				trayController->setTarget(.0001*4095);
+				trayController->waitUntilSettled();
+				backwardChassis->moveDistanceAsync(-3.5_in);
+
 				printf("blueBig");
+				auto angle = 110_deg;
+				auto distance = 32_in;
+				backwardChassis->setMaxVelocity(200);
+
+				//*
+				backwardChassis->moveDistanceAsync(24_in);
+				intake->moveVelocity(100);
+				backwardChassis->waitUntilSettled();
+				backwardChassis->moveDistance(6_in);
+
+				backwardChassis->setMaxVelocity(100);
+				backwardChassis->turnAngle(angle);
+				backwardChassis->moveDistance(distance);
+				//*/
+
+				intake->moveVelocity(-100);
+				pros::delay(1000);
+
+				tray->moveVelocity(100);
+				trayController->setTarget(.41 * 4095);
+				trayController->waitUntilSettled();
+				trayController->setTarget(.0001 * 4095);
+				intake->moveVelocity(-100);
+
+				backwardChassis->moveDistance(-distance);
+				trayController->waitUntilSettled();
+				backwardChassis->turnAngle(-angle);
+				intake->moveVelocity(0);				
 			 })
 			.button("Blue Small", [&]() { 
 				printf("blueSmall");
+				small(false);
+			})
+			 .newRow()
+			 .button("Forward Stack", [&](){
+/*				
+				trayController->flipDisable(true);
+				tray->moveVelocity(100);
+				intake->moveVelocity(-100);
+				pros::delay(1000);
+				backwardChassis->waitUntilSettled();				
+				tray->moveVelocity(0);//*/
+				backwardChassis->moveDistanceAsync(36_in);
+				intake->moveVelocity(100);
+				backwardChassis->waitUntilSettled();
+//				backwardChassis->moveDistanceAsync(24_ft);
+				intake->moveVelocity(-100);
+				pros::delay(500);
+				intake->moveVelocity(100);
+				pros::delay(500);
+				intake->moveVelocity(0);
+				trayController->flipDisable(false);
+				trayController->setTarget(.41 * 4095);
+				trayController->waitUntilSettled();
+				trayController->setTarget(.0001 * 4095);
+				backwardChassis->moveDistanceAsync(-12_in);
+				intake->moveVelocity(-100);
+				backwardChassis->waitUntilSettled();
+				intake->moveVelocity(0);				 
+			 })
+			 .button("Grab Stack", [&](){
+				intake->moveVelocity(100);
+				backwardChassis->moveDistance(4_in);
+				backwardChassis->setMaxVelocity(200);
+				backwardChassis->moveDistance(12_in);				 
 			 })
 			.build()
 		);
@@ -133,6 +322,13 @@ void initialize() {
 		.attachResetter([&](){
 			model->resetSensors();
 		});
+
+	pros::delay(10);
+	screen->makePage<GUI::Odom>("Backward Odom")
+		.attachOdom(backwardOdom)
+		.attachResetter([&](){
+			model->resetSensors();
+		});	
 
 //*
 	screen->makePage<GUI::Graph>("Temp")
@@ -162,9 +358,21 @@ void disabled() {
 void competition_initialize() {}
 
 void autonomous() {
-	model->setMaxVelocity(150);
-	model->resetSensors();
+	viciousTrayController->flipDisable(false);
+	trayController->flipDisable(true);
+
+	backwardModel->resetSensors();
+	backwardChassis->setMaxVelocity(100);
+
+	backwardChassis->waitUntilSettled();
+	//*
+
+	//*/
+
 	selector->run();
+
+	viciousTrayController->flipDisable(true);
+	trayController->flipDisable(false);
 }
 
 void taskFnc(void*){
@@ -228,7 +436,7 @@ void taskFnc(void*){
 }
 
 void opcontrol() {
-	chassis->stop();
+	backwardChassis->stop();
 
 	master->setText(0,1,"opcontrol");	
 	pros::Task task( taskFnc, NULL, "taskFnc" );
@@ -239,10 +447,12 @@ void opcontrol() {
 		double right;			
 		if( std::abs(master->getAnalog(ControllerAnalog::rightY)) <= .1){
 			left = master->getAnalog(ControllerAnalog::leftX);
-			right = -master->getAnalog(ControllerAnalog::leftX);			
+			right = -master->getAnalog(ControllerAnalog::leftX);
+//			model->setMaxVoltage(800);
 		}else{
 			left = master->getAnalog(ControllerAnalog::rightY) + (.75 * master->getAnalog(ControllerAnalog::leftX));
 			right = master->getAnalog(ControllerAnalog::rightY) + (-.75 * master->getAnalog(ControllerAnalog::leftX));
+//			model->setMaxVoltage(1400);
 		}
 
 		model->tank(left, right, .1);
