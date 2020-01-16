@@ -29,7 +29,7 @@ void initialize() {
 	master->setText(0,0,"initialize");
 
 	chassis = ChassisControllerBuilder()
-		.withMotors(2,-9,-8,3)
+		.withMotors(2,-7,-4,3)
 		.withSensors( ADIEncoder(1,2), ADIEncoder(7,8, true), ADIEncoder(4,5) )
 		.withGains(
 			IterativePosPIDController::Gains{.0030,.0000,.0000,.00},
@@ -47,7 +47,7 @@ void initialize() {
 		chassis->getChassisScales()
 	);//*/
 
-	intake = std::make_shared<MotorGroup>(MotorGroup({5}));
+	intake = std::make_shared<MotorGroup>(MotorGroup({20}));
 	intake->setGearing(AbstractMotor::gearset::red);//*/
 
 	lift = std::make_shared<MotorGroup>(MotorGroup({6}));
