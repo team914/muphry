@@ -1,99 +1,34 @@
-#include "main.h"
-
-#include "lib7842/api.hpp"
-#include "okapi/api.hpp"
-
-#include <memory>
-#include <map>
-#include <functional>
+#include "muphry/robot.hpp"
+#include "muphry/autons.hpp"
 
 using namespace lib7842;
 using namespace okapi;
 
+//chassis
 std::shared_ptr<ChassisController> chassis;
 std::shared_ptr<ChassisController> backwardChassis;
-
 std::shared_ptr<SkidSteerModel> model;
 std::shared_ptr<SkidSteerModel> backwardModel;
-
-
 std::shared_ptr<TwoEncoderOdometry> odom;
 std::shared_ptr<TwoEncoderOdometry> backwardOdom;
 
 std::shared_ptr<OdomController> controller;
 
+//intake
 std::shared_ptr<MotorGroup> intake;
 
+//tray
 std::shared_ptr<MotorGroup> tray;
 std::shared_ptr<Potentiometer> trayPotent;
 std::shared_ptr<AsyncPosPIDController> trayController;
 std::shared_ptr<AsyncPosPIDController> viciousTrayController;
 
+//controller
 std::shared_ptr<Controller> master;
 
+//screen
 std::shared_ptr<GUI::Screen> screen;
-
 GUI::Selector* selector;
-
-void small(bool red = true){
-	viciousTrayController->flipDisable(false);
-	trayController->flipDisable(true);
-
-	//flipout
-	intake->moveVelocity(-100);
-	viciousTrayController->setTarget(.41*4095);
-	pros::delay(1000);
-	backwardChassis->waitUntilSettled();
-	intake->moveVelocity(0);
-	viciousTrayController->setTarget(.0001*4095);
-	pros::delay(500);
-
-	//grab 4 cubes
-	intake->moveVelocity(100);
-	backwardModel->setMaxVelocity(150);
-	backwardChassis->moveDistance(40_in);
-
-	//move back
-	backwardChassis->setMaxVelocity(200);
-	backwardChassis->moveDistanceAsync(-20_in);
-	pros::delay(1000);
-	intake->moveVelocity(0);
-	backwardChassis->waitUntilSettled();
-
-	//turn to zone
-	backwardModel->setMaxVelocity(150);
-	if(red){
-		backwardChassis->turnAngle(120_deg);
-	}else{
-		backwardChassis->turnAngle(-120_deg);
-	}
-	pros::delay(10);
-
-	//move to zone
-	backwardChassis->moveDistanceAsync(17_in);
-	intake->moveVelocity(-100);
-	pros::delay(500);
-	intake->moveVelocity(100);
-	pros::delay(500);
-	intake->moveVelocity(0);
-	backwardChassis->waitUntilSettled();
-
-	//stack
-	viciousTrayController->setTarget(.41*4095);
-	pros::delay(500);
-	intake->moveVelocity(100);
-	pros::delay(500);
-	intake->moveVelocity(0);
-	viciousTrayController->waitUntilSettled();
-
-	//move away
-	viciousTrayController->setTarget(.0001*4095);
-	backwardChassis->moveDistanceAsync(-18_in);
-	pros::delay(250);
-	intake->moveVelocity(-100);
-	backwardChassis->waitUntilSettled();
-	intake->moveVelocity(0);
-}
 
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
@@ -101,8 +36,7 @@ void initialize() {
 
 	master = std::make_shared<Controller>();
 	master->setText(0,0,"initialize");
-	
-	//*
+
 	chassis = ChassisControllerBuilder()
 		.withMotors({1,2},{-9,-20})
 		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
@@ -121,7 +55,7 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
 		model,
 		chassis->getChassisScales()
-	);//*/
+	);
 
 	backwardChassis = ChassisControllerBuilder()
 		.withMotors({1,2},{-9,-20})
@@ -154,7 +88,7 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);//*/
 
-	intake = std::make_shared<MotorGroup>(MotorGroup({5,-6}));
+	intake = std::make_shared<MotorGroup>(MotorGroup({5,-18}));
 	intake->setGearing(AbstractMotor::gearset::red);
 
 	tray = std::make_shared<MotorGroup>(MotorGroup({17}));
@@ -204,35 +138,19 @@ void initialize() {
 				viciousTrayController->waitUntilSettled();
 			})
 			.button("Test", [&]() { 
-				#define TURN
-				#ifdef TURN
-				auto angle = 360_deg;
-				chassis->turnAngle(angle);
-				pros::delay(500);
-				chassis->turnAngle(-angle);
-				pros::delay(500);
-				#endif
-				#ifndef TURN
-				auto distance = 24_in;
-				backwardChassis->moveDistance(distance);
-				pros::delay(500);
-				backwardChassis->moveDistance(-distance);
-				pros::delay(500);
-				#endif
+				printf("test\n");
+				Auton::test(true);
 			 })
 			.newRow()
-			.button("Red Big",   [&]() { 
-				printf("redBig");
-				backwardChassis->moveDistance(-5_in);
-				backwardChassis->moveDistance(10_in);
-				backwardChassis->turnAngle(67_deg);
+			.button("Red Big", [&]() { 
+
 			 })
 			.button("Red Small", [&]() { 
 				printf("redSmall");
-				small();
+				Auton::small();
 			 })
 			.newRow()
-			.button("Blue Big", [&]()   { 
+			.button("Blue Big", [&](){
 				backwardChassis->moveDistance(12_in);
 				backwardChassis->moveDistance(-14_in);
 
@@ -278,41 +196,10 @@ void initialize() {
 			 })
 			.button("Blue Small", [&]() { 
 				printf("blueSmall");
-				small(false);
+				Auton::small(false);
 			})
 			 .newRow()
-			 .button("Forward Stack", [&](){
-/*				
-				trayController->flipDisable(true);
-				tray->moveVelocity(100);
-				intake->moveVelocity(-100);
-				pros::delay(1000);
-				backwardChassis->waitUntilSettled();				
-				tray->moveVelocity(0);//*/
-				backwardChassis->moveDistanceAsync(36_in);
-				intake->moveVelocity(100);
-				backwardChassis->waitUntilSettled();
-//				backwardChassis->moveDistanceAsync(24_ft);
-				intake->moveVelocity(-100);
-				pros::delay(500);
-				intake->moveVelocity(100);
-				pros::delay(500);
-				intake->moveVelocity(0);
-				trayController->flipDisable(false);
-				trayController->setTarget(.41 * 4095);
-				trayController->waitUntilSettled();
-				trayController->setTarget(.0001 * 4095);
-				backwardChassis->moveDistanceAsync(-12_in);
-				intake->moveVelocity(-100);
-				backwardChassis->waitUntilSettled();
-				intake->moveVelocity(0);				 
-			 })
-			 .button("Grab Stack", [&](){
-				intake->moveVelocity(100);
-				backwardChassis->moveDistance(4_in);
-				backwardChassis->setMaxVelocity(200);
-				backwardChassis->moveDistance(12_in);				 
-			 })
+
 			.build()
 		);
 
@@ -322,7 +209,6 @@ void initialize() {
 		.attachResetter([&](){
 			model->resetSensors();
 		});
-
 	pros::delay(10);
 	screen->makePage<GUI::Odom>("Backward Odom")
 		.attachOdom(backwardOdom)
@@ -330,7 +216,6 @@ void initialize() {
 			model->resetSensors();
 		});	
 
-//*
 	screen->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
@@ -343,11 +228,8 @@ void initialize() {
 		.withRange(0,4096)
 		.withGrid(16,1)
 		.withSeries("TrayPotent", LV_COLOR_MAKE(6,214,160), [](){ return trayPotent->controllerGet(); })
-		.withSeries("TrayController7", LV_COLOR_MAKE(239,71,111), [](){ return trayPotent->controllerGet(); })
-		;
+		.withSeries("TrayController7", LV_COLOR_MAKE(239,71,111), [](){ return trayPotent->controllerGet(); });
 
-//*/
-	master->setText(0,11,"end");
 	printf("init end\n");
 }
 
@@ -365,9 +247,6 @@ void autonomous() {
 	backwardChassis->setMaxVelocity(100);
 
 	backwardChassis->waitUntilSettled();
-	//*
-
-	//*/
 
 	selector->run();
 
