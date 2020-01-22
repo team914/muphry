@@ -37,3 +37,6 @@ extern std::shared_ptr<Controller> master;
 //screen
 extern std::shared_ptr<GUI::Screen> screen;
 extern GUI::Selector* selector;
+
+//overheat warning
+void overheatWarn();

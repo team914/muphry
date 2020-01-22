@@ -40,7 +40,7 @@ void initialize() {
 	chassis = ChassisControllerBuilder()
 		.withMotors({1,2},{-9,-20})
 		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in, 2.75_in, .0001_in}, imev5GreenTPR) )
+		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in}, imev5GreenTPR) )
 		.withGains(
 			IterativePosPIDController::Gains{.002,.0015,.00003,.00},
 			IterativePosPIDController::Gains{.0017,.0000,.00003,.00},
@@ -126,8 +126,7 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
-				viciousTrayController->flipDisable(false);
-				trayController->flipDisable(true);
+
 				pros::delay(20);
 
 				viciousTrayController->controllerSet(.41*4095);
@@ -255,7 +254,7 @@ void autonomous() {
 }
 
 void taskFnc(void*){
-	while(true){
+//	while(true){
 		std::string out;
 		//Tray Optimal || Tray Over Temp || Tray Over Crnt || Tray WARNING
 		//Intk Optimal || Intk Over Temp || Intk Over Crnt || Intk WARNING
@@ -311,7 +310,7 @@ void taskFnc(void*){
 			pros::delay(500);
 		}
 		pros::delay(20);
-	}
+//	}
 }
 
 void opcontrol() {
@@ -334,7 +333,7 @@ void opcontrol() {
 //			model->setMaxVoltage(1400);
 		}
 
-		model->tank(left, right, .1);
+		backwardModel->tank(left, right, .1);
 		
 		//INTAKE TOGGLE
 		if(master->getDigital(ControllerDigital::Y)){
@@ -353,7 +352,7 @@ void opcontrol() {
 			intake->moveVelocity(-100);
 			intakeToggle = false;
 		}else if(intakeToggle){
-			intake->moveVelocity(100);
+			intake->moveVelocity(50);
 		}else{
 			intake->moveVelocity(0);
 		}
@@ -388,5 +387,7 @@ void opcontrol() {
 		}
 
 		pros::delay(20);
+
+
 	}
 }
