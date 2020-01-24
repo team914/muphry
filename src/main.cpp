@@ -58,14 +58,14 @@ void initialize() {
 	master->setText(0,0,"initialize");	
 	pros::delay(10);
 
-	MotorGroup leftSide({1,19});
+	MotorGroup leftSide({1,2});
 	MotorGroup rightSide({-9,-20});
 
 	model = std::make_shared<SkidSteerModel>(
 		std::make_shared<MotorGroup>(leftSide),
 		std::make_shared<MotorGroup>(rightSide),
-		std::make_shared<ADIEncoder>(-3,15,false),
-		std::make_shared<ADIEncoder>(5,20,true),
+		leftSide.getEncoder(),
+		rightSide.getEncoder(),
 		200,
 		12000
 	);
@@ -131,12 +131,12 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);//*/
 
-	intake = std::make_shared<MotorGroup>(MotorGroup({9,-10 }));
+	intake = std::make_shared<MotorGroup>(MotorGroup({11,-18}));
 	intake->setGearing(AbstractMotor::gearset::red);
 
 	pros::c::adi_pin_mode(3,INPUT_ANALOG);
 
-	tray = std::make_shared<MotorGroup>(MotorGroup({-7}));
+	tray = std::make_shared<MotorGroup>(MotorGroup({17}));
 	tray->setGearing(AbstractMotor::gearset::red);
 
 	trayPotent = std::make_shared<Potentiometer>(6);
@@ -171,11 +171,7 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
-//				Auton::simple();
-				Auton::flipout();
-				Auton::skills();
-
-
+				Auton::simple();
 			})
 			.button("Skills", [&]() { 
 				printf("skills\n");
@@ -270,13 +266,10 @@ void initialize() {
 }
 
 void disabled() {
-
 	master->clear();
 	pros::delay(10);
 	master->setText(0,0,"disabled");	
 	pros::delay(10);
-
-//	->stop();
 }
 
 void competition_initialize() {
@@ -301,7 +294,7 @@ void autonomous() {
 
 //	model->waitUntilSettled();
 
-//	selector->run();
+	selector->run();
 
 	viciousTrayController->flipDisable(true);
 	trayController->flipDisable(false);
