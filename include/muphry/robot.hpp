@@ -13,14 +13,20 @@ using namespace lib7842;
 using namespace okapi;
 
 //chassis
-extern std::shared_ptr<ChassisController> chassis;
-extern std::shared_ptr<ChassisController> backwardChassis;
+extern std::shared_ptr<ChassisControllerIntegrated> chassis;
 extern std::shared_ptr<SkidSteerModel> model;
-extern std::shared_ptr<SkidSteerModel> backwardModel;
+extern std::shared_ptr<SkidSteerModel> imodel;
 extern std::shared_ptr<TwoEncoderOdometry> odom;
-extern std::shared_ptr<TwoEncoderOdometry> backwardOdom;
 
 extern std::shared_ptr<OdomController> controller;
+
+//gains
+/*
+extern std::unique_ptr<IterativePosPIDController> distance;
+extern std::unique_ptr<IterativePosPIDController> turn;
+extern std::unique_ptr<IterativePosPIDController> angle;
+extern QLength settleRadius;
+extern TimeUtil timeUtil;//*/
 
 //intake
 extern std::shared_ptr<MotorGroup> intake;
@@ -37,3 +43,7 @@ extern std::shared_ptr<Controller> master;
 //screen
 extern std::shared_ptr<GUI::Screen> screen;
 extern GUI::Selector* selector;
+
+
+//overheat warning
+void overheatWarn();
