@@ -17,12 +17,12 @@ void overheatWarn(){
 			master->clearLine(0);
 			master->setText(0,0,"Tray Over Temp");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}else if(!tray->getTemperature()>=maxTemp && tray->isOverTemp()){
 			master->clearLine(0);
 			master->setText(0,0,"Tray Over Crnt");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}
 		//INTAKE
 		if(intake->getTemperature()<maxTemp && !intake->isOverCurrent()){
@@ -33,12 +33,12 @@ void overheatWarn(){
 			master->clearLine(1);
 			master->setText(1,0,"Intk Over Temp");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}else if(!intake->getTemperature()>=maxTemp && intake->isOverTemp()){
 			master->clearLine(1);
 			master->setText(1,0,"Intk Over Crnt");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}
 		//DRIVE
 		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
@@ -49,12 +49,12 @@ void overheatWarn(){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Temp");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Crnt");
 			master->rumble("- -");
-			pros::delay(500);
+			pros::delay(20);
 		}
 		pros::delay(20);
 //	}

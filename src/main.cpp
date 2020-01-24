@@ -3,16 +3,22 @@
 
 using namespace lib7842;
 using namespace okapi;
+using namespace pros::c;
 
-//chassis
-std::shared_ptr<ChassisController> chassis;
-std::shared_ptr<ChassisController> backwardChassis;
+//controller
+std::shared_ptr<ChassisControllerIntegrated> chassis;
 std::shared_ptr<SkidSteerModel> model;
-std::shared_ptr<SkidSteerModel> backwardModel;
+std::shared_ptr<SkidSteerModel> imodel;
 std::shared_ptr<TwoEncoderOdometry> odom;
-std::shared_ptr<TwoEncoderOdometry> backwardOdom;
 
 std::shared_ptr<OdomController> controller;
+
+//gains
+/*std::unique_ptr<IterativePosPIDController> distance;
+std::unique_ptr<IterativePosPIDController> turn;
+std::unique_ptr<IterativePosPIDController> angle;
+QLength settleRadius(1_ft);
+TimeUtil timeUtil(TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms));//*/
 
 //intake
 std::shared_ptr<MotorGroup> intake;
@@ -30,68 +36,107 @@ std::shared_ptr<Controller> master;
 std::shared_ptr<GUI::Screen> screen;
 GUI::Selector* selector;
 
+//task functions
+void my_task_fn(void* param){
+	while(true){
+		odom->step();
+		pros::delay(10);
+	}
+}
+
+//Task
+std::shared_ptr<pros::Task> odomTask;
+
 void initialize() {
 	pros::delay(500);//wait for ADIEncoders to catch up
 	printf("init\n");
 
 	master = std::make_shared<Controller>();
-	master->setText(0,0,"initialize");
 
-	chassis = ChassisControllerBuilder()
-		.withMotors({1,2},{-9,-20})
-		.withSensors( ADIEncoder(7,8,true),ADIEncoder(1,2) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({7.919_in, 10.45_in}, imev5GreenTPR) )
-		.withGains(
-			IterativePosPIDController::Gains{.002,.0015,.00003,.00},
-			IterativePosPIDController::Gains{.0017,.0000,.00003,.00},
-			IterativePosPIDController::Gains{.0015,.0000,.0000,.00}
-		)
-		.withClosedLoopControllerTimeUtil(10,5,500_ms)
-		.build();
+	master->clear();
+	pros::delay(10);
+	master->setText(0,0,"initialize");	
+	pros::delay(10);
 
-	model = std::dynamic_pointer_cast<SkidSteerModel>(chassis->getModel());
+	MotorGroup leftSide({1,19});
+	MotorGroup rightSide({-9,-20});
+
+	model = std::make_shared<SkidSteerModel>(
+		std::make_shared<MotorGroup>(leftSide),
+		std::make_shared<MotorGroup>(rightSide),
+		std::make_shared<ADIEncoder>(-3,15,false),
+		std::make_shared<ADIEncoder>(5,20,true),
+		200,
+		12000
+	);
+	model->setEncoderUnits(AbstractMotor::encoderUnits(0));
+	model->setGearing(AbstractMotor::gearset::green);
+
+/*
+	imodel = std::make_shared<SkidSteerModel>(
+		std::make_shared<MotorGroup>(leftSide),
+		std::make_shared<MotorGroup>(rightSide),
+		std::make_shared<ADIEncoder>(1,2,true),
+		std::make_shared<ADIEncoder>(7,8,false),
+		200,
+		12000
+	);
+	imodel->setEncoderUnits(AbstractMotor::encoderUnits(0));
+	imodel->setGearing(AbstractMotor::gearset::green);	//*/
+
+	chassis = std::make_shared<ChassisControllerIntegrated>(
+		TimeUtilFactory::withSettledUtilParams(50,5,250_ms),
+		model,
+		std::make_unique<AsyncPosIntegratedController>(std::make_shared<MotorGroup>(leftSide),AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green,1}, 200,TimeUtilFactory::withSettledUtilParams(50,5,250_ms)),
+		std::make_unique<AsyncPosIntegratedController>(std::make_shared<MotorGroup>(rightSide),AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green,1}, 200,TimeUtilFactory::withSettledUtilParams(50,5,250_ms)),
+		AbstractMotor::gearset::green,
+		ChassisScales({3.25_in, 11_in},imev5GreenTPR)
+	);
+	chassis->setMaxVelocity(100);
 
 	odom = std::make_shared<TwoEncoderOdometry>(
-		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
+		TimeUtilFactory::withSettledUtilParams(50,5,250_ms),
 		model,
-		chassis->getChassisScales()
+		ChassisScales({3.5_in, 10_in}, 360)
 	);
+    std::string text("PROS");
+	odomTask = std::make_shared<pros::Task>(my_task_fn, &text, "");
 
-	backwardChassis = ChassisControllerBuilder()
-		.withMotors({1,2},{-9,-20})
-//		.withSensors( ADIEncoder(7,8,false),ADIEncoder(1,2,true) )
-		.withDimensions( AbstractMotor::gearset::green, ChassisScales({(7.919/pi) * inch, 10.45_in}, imev5GreenTPR) )
-		.build();
+	odom->setState(OdomState{0_ft,0_ft,0_deg}, StateMode::CARTESIAN);
+/*
+	distance = std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
+		{.002,.00001,.00003,.00},
+		TimeUtilFactory::withSettledUtilParams(75, 5, 250_ms));
+	turn = std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
+		{.01,.0000,.000,.00},
+		TimeUtilFactory::withSettledUtilParams(10, 5, 250_ms));
+	angle = std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
+		{.0005,.0000,.0000,.00},
+		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms));//*/
 
-	backwardModel = std::dynamic_pointer_cast<SkidSteerModel>(backwardChassis->getModel());
-
-	backwardOdom = std::make_shared<TwoEncoderOdometry>(
-		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms),
-		backwardChassis->getModel(),
-		backwardChassis->getChassisScales()
-	);
-
-	/*
+	//*
 	controller = std::make_shared<OdomController>(
 		model,
 		odom,
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.002,.0000,.00003,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+			{.002,.00001,.00003,.00},
+			TimeUtilFactory::withSettledUtilParams(75, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0035,.0000,.00015,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+		{.01,.0000,.000,.00},
+		TimeUtilFactory::withSettledUtilParams(10, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.00,.0000,.00003,.00},
+			{.0005,.0000,.0000,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
-		2_in,
+		1_ft,
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);//*/
 
-	intake = std::make_shared<MotorGroup>(MotorGroup({5,-18}));
+	intake = std::make_shared<MotorGroup>(MotorGroup({9,-10 }));
 	intake->setGearing(AbstractMotor::gearset::red);
 
-	tray = std::make_shared<MotorGroup>(MotorGroup({17}));
+	pros::c::adi_pin_mode(3,INPUT_ANALOG);
+
+	tray = std::make_shared<MotorGroup>(MotorGroup({-7}));
 	tray->setGearing(AbstractMotor::gearset::red);
 
 	trayPotent = std::make_shared<Potentiometer>(6);
@@ -112,9 +157,9 @@ void initialize() {
 		trayPotent,
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.001,
-		.0000,
-		.000,
+		.005,
+		.00003,
+		.00005,
 		.0
 	);
 	viciousTrayController->startThread();
@@ -126,78 +171,76 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
+//				Auton::simple();
+				Auton::flipout();
+				Auton::skills();
 
-				pros::delay(20);
 
-				viciousTrayController->controllerSet(.41*4095);
-				viciousTrayController->waitUntilSettled();
-				pros::delay(20);
-
-				viciousTrayController->controllerSet(.0001*4095);
-				viciousTrayController->waitUntilSettled();
 			})
-			.button("Test", [&]() { 
-				printf("test\n");
-				Auton::test(true);
+			.button("Skills", [&]() { 
+				printf("skills\n");
+				Auton::flipout();
+				Auton::skills();
 			 })
 			.newRow()
 			.button("Red Big", [&]() { 
-
+				
 			 })
 			.button("Red Small", [&]() { 
 				printf("redSmall");
-				Auton::small();
+				Auton::flipout();
+				Auton::small(true);
 			 })
 			.newRow()
 			.button("Blue Big", [&](){
-				backwardChassis->moveDistance(12_in);
-				backwardChassis->moveDistance(-14_in);
+				controller->moveDistance(12_in);
+				controller->moveDistance(-14_in);
 
 				intake->moveVelocity(-100);
-				trayController->setTarget(.41*4095);
-				backwardChassis->moveDistanceAsync(3_in);
+				trayController->setTarget(.45*4095);
+//				controller->moveDistanceAsync(3_in);
 				trayController->waitUntilSettled();
-				backwardChassis->waitUntilSettled();
+//				controller->waitUntilSettled();
 				intake->moveVelocity(0);
 				trayController->setTarget(.0001*4095);
 				trayController->waitUntilSettled();
-				backwardChassis->moveDistanceAsync(-3.5_in);
+//				controller->moveDistanceAsync(-3.5_in);
 
 				printf("blueBig");
 				auto angle = 110_deg;
 				auto distance = 32_in;
-				backwardChassis->setMaxVelocity(200);
+//				controller->setMaxVelocity(200);
 
 				//*
-				backwardChassis->moveDistanceAsync(24_in);
+//				controller->moveDistanceAsync(24_in);
 				intake->moveVelocity(100);
-				backwardChassis->waitUntilSettled();
-				backwardChassis->moveDistance(6_in);
+//				controller->waitUntilSettled();
+//				controller->moveDistance(6_in);
 
-				backwardChassis->setMaxVelocity(100);
-				backwardChassis->turnAngle(angle);
-				backwardChassis->moveDistance(distance);
+//				controller->setMaxVelocity(100);
+				controller->turnAngle(angle);
+				controller->moveDistance(distance);
 				//*/
 
 				intake->moveVelocity(-100);
 				pros::delay(1000);
 
 				tray->moveVelocity(100);
-				trayController->setTarget(.41 * 4095);
+				trayController->setTarget(.45 * 4095);
 				trayController->waitUntilSettled();
 				trayController->setTarget(.0001 * 4095);
 				intake->moveVelocity(-100);
 
-				backwardChassis->moveDistance(-distance);
+//				controller->moveDistance(-distance);
 				trayController->waitUntilSettled();
-				backwardChassis->turnAngle(-angle);
+				controller->turnAngle(-angle);
 				intake->moveVelocity(0);				
 			 })
 			.button("Blue Small", [&]() { 
 				printf("blueSmall");
+				Auton::flipout();
 				Auton::small(false);
 			})
-			 .newRow()
 
 			.build()
 		);
@@ -209,12 +252,6 @@ void initialize() {
 			model->resetSensors();
 		});
 	pros::delay(10);
-	screen->makePage<GUI::Odom>("Backward Odom")
-		.attachOdom(backwardOdom)
-		.attachResetter([&](){
-			model->resetSensors();
-		});	
-
 	screen->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
 		.withGrid(2,4)
@@ -229,98 +266,79 @@ void initialize() {
 		.withSeries("TrayPotent", LV_COLOR_MAKE(6,214,160), [](){ return trayPotent->controllerGet(); })
 		.withSeries("TrayController7", LV_COLOR_MAKE(239,71,111), [](){ return trayPotent->controllerGet(); });
 
-	printf("init end\n");
+
 }
 
 void disabled() {
-	chassis->stop();
+
+	master->clear();
+	pros::delay(10);
+	master->setText(0,0,"disabled");	
+	pros::delay(10);
+
+//	->stop();
 }
 
-void competition_initialize() {}
+void competition_initialize() {
+
+	master->clear();
+	pros::delay(10);
+	master->setText(0,0,"comp init");	
+	pros::delay(10);	
+}
 
 void autonomous() {
+	master->clear();
+	pros::delay(10);
+	master->setText(0,0,"autonomous");
+	pros::delay(10);
+
 	viciousTrayController->flipDisable(false);
 	trayController->flipDisable(true);
 
-	backwardModel->resetSensors();
-	backwardChassis->setMaxVelocity(100);
+	model->resetSensors();
+	model->setMaxVelocity(100);
 
-	backwardChassis->waitUntilSettled();
+//	model->waitUntilSettled();
 
-	selector->run();
+//	selector->run();
 
 	viciousTrayController->flipDisable(true);
 	trayController->flipDisable(false);
-}
 
-void taskFnc(void*){
-//	while(true){
-		std::string out;
-		//Tray Optimal || Tray Over Temp || Tray Over Crnt || Tray WARNING
-		//Intk Optimal || Intk Over Temp || Intk Over Crnt || Intk WARNING
-		//Drve Optimal || Drve Over Temp || Drve Over Crnt || Drve WARNING	
-
-		const double maxTemp = 60;
-		//TRAY
-		if(tray->getTemperature()<maxTemp && !tray->isOverCurrent()){
-			master->clearLine(0);
-			out = "TrayTmp" + std::to_string(tray->getTemperature());
-			master->setText(0,0,out.c_str());
-		}else if(tray->getTemperature()>=maxTemp && !tray->isOverCurrent()){
-			master->clearLine(0);
-			master->setText(0,0,"Tray Over Temp");
-			master->rumble("- -");
-			pros::delay(500);
-		}else if(!tray->getTemperature()>=maxTemp && tray->isOverTemp()){
-			master->clearLine(0);
-			master->setText(0,0,"Tray Over Crnt");
-			master->rumble("- -");
-			pros::delay(500);
-		}
-		//INTAKE
-		if(intake->getTemperature()<maxTemp && !intake->isOverCurrent()){
-			master->clearLine(1);
-			out = "IntkTmp" + std::to_string(intake->getTemperature());
-			master->setText(1,0,out.c_str());
-		}else if(intake->getTemperature()>=maxTemp && !intake->isOverCurrent()){
-			master->clearLine(1);
-			master->setText(1,0,"Intk Over Temp");
-			master->rumble("- -");
-			pros::delay(500);
-		}else if(!intake->getTemperature()>=maxTemp && intake->isOverTemp()){
-			master->clearLine(1);
-			master->setText(1,0,"Intk Over Crnt");
-			master->rumble("- -");
-			pros::delay(500);
-		}
-		//DRIVE
-		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
-			master->clearLine(1);
-			out = "DrveTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
-			master->setText(1,0,out.c_str());
-		}else if(model->getLeftSideMotor()->getTemperature()>=maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
-			master->clearLine(1);
-			master->setText(1,0,"Drve Over Temp");
-			master->rumble("- -");
-			pros::delay(500);
-		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
-			master->clearLine(1);
-			master->setText(1,0,"Drve Over Crnt");
-			master->rumble("- -");
-			pros::delay(500);
-		}
-		pros::delay(20);
-//	}
 }
 
 void opcontrol() {
-	backwardChassis->stop();
 
-	master->setText(0,1,"opcontrol");	
-	pros::Task task( taskFnc, NULL, "taskFnc" );
+	master->clear();
+	pros::delay(10);
+
+//	pros::Task task( taskFnc, NULL, "taskFnc" );
 	bool intakeToggle = false;
 
+	std::string out0( std::to_string(odom->getState().x.convert(inch)) );
+	out0.append(" in");
+	std::string lastOut0( std::to_string(odom->getState().x.convert(inch)) );
+	lastOut0.append(" in");
+
+	std::string out1( std::to_string(adi_analog_read(3)) );
+	out1.append(" val");
+	std::string lastOut1( std::to_string(adi_analog_read(3)) );
+	lastOut1.append(" val");
+
 	while (true) {
+
+		
+		if( std::to_string(odom->getState().x.convert(inch)) + " in" == lastOut0 ){
+			out0 = std::to_string(odom->getState().x.convert(inch)) + " in";
+			master->setText(0,0,out0);
+		}
+
+		if( std::to_string(adi_analog_read(3)) + " val" == lastOut1 ){
+			out1 = std::to_string(adi_analog_read(3)) + " val";
+			master->setText(1,0,out1);
+		}
+
 		double left;
 		double right;			
 		if( std::abs(master->getAnalog(ControllerAnalog::rightY)) <= .1){
@@ -330,17 +348,17 @@ void opcontrol() {
 		}else{
 			left = master->getAnalog(ControllerAnalog::rightY) + (.75 * master->getAnalog(ControllerAnalog::leftX));
 			right = master->getAnalog(ControllerAnalog::rightY) + (-.75 * master->getAnalog(ControllerAnalog::leftX));
-//			model->setMaxVoltage(1400);
+//			model->setMaxVoltage(1200);
 		}
 
-		backwardModel->tank(left, right, .1);
-		
+		model->tank(left, right, .1);
+	
 		//INTAKE TOGGLE
 		if(master->getDigital(ControllerDigital::Y)){
 			intakeToggle=!intakeToggle;		
 			while(master->getDigital(ControllerDigital::Y)){
 				pros::delay(20);
-			}	
+			}
 		}
 
 		//INTAKE
@@ -358,7 +376,7 @@ void opcontrol() {
 		}
 
 		//TRAY
-		const double trayUp = .41 * 4095;   //old potentiometer 2625 //tray internal encoder 2000
+		const double trayUp = .45 * 4095;   //old potentiometer 2625 //tray internal encoder 2000
 		const double trayDown = .0001 * 4095; //old potentiometer 3650 //tray internal encoder -50
 		if(master->getDigital(ControllerDigital::L1)){
 			//trayController up
@@ -371,7 +389,6 @@ void opcontrol() {
 				tray->moveVelocity(-100);
 				pros::delay(20);
 			}
-			tray->moveVelocity(0);
 			trayController->flipDisable(false);
 			trayController->setTarget(trayDown);
 		}else if(master->getDigital(ControllerDigital::right)){
@@ -386,8 +403,16 @@ void opcontrol() {
 			intake->moveVelocity(0);
 		}
 
-		pros::delay(20);
+		if(master->getDigital(ControllerDigital::down)){
+			autonomous();
+		}
 
+		if(master->getDigital(ControllerDigital::B)){
+			Auton::stackInTower();
+
+		}		
+
+		overheatWarn();
 
 	}
 }
