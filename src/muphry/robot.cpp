@@ -41,16 +41,16 @@ void overheatWarn(){
 			pros::delay(500);
 		}
 		//DRIVE
-		if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
+		if(model->getBottomLeftMotor()->getTemperature()<maxTemp && !model->getBottomLeftMotor()->isOverCurrent()){
 			master->clearLine(1);
-			out = "DrveTmp" + std::to_string(model->getLeftSideMotor()->getTemperature());
+			out = "DrveTmp" + std::to_string(model->getBottomLeftMotor()->getTemperature());
 			master->setText(1,0,out.c_str());
-		}else if(model->getLeftSideMotor()->getTemperature()>=maxTemp && !model->getLeftSideMotor()->isOverCurrent()){
+		}else if(model->getBottomLeftMotor()->getTemperature()>=maxTemp && !model->getBottomLeftMotor()->isOverCurrent()){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Temp");
 			master->rumble("- -");
 			pros::delay(500);
-		}else if(model->getLeftSideMotor()->getTemperature()<maxTemp && !model->getLeftSideMotor()->isOverTemp()){
+		}else if(model->getBottomLeftMotor()->getTemperature()<maxTemp && !model->getBottomLeftMotor()->isOverTemp()){
 			master->clearLine(1);
 			master->setText(1,0,"Drve Over Crnt");
 			master->rumble("- -");
