@@ -6,7 +6,6 @@ using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
 
-
 //*
 //chassis
 std::shared_ptr<ChassisController> chassis;
@@ -14,7 +13,7 @@ std::shared_ptr<ThreeEncoderXDriveModel> model;
 std::shared_ptr<CustomOdometry> odom;
 
 //controllers
-std::shared_ptr<OdomXController> controller;
+std::shared_ptr<OdomController> controller;
 std::shared_ptr<PathFollower> follower;
 
 //encoders
@@ -82,7 +81,7 @@ void initialize() {
 	bottomLeft->setGearing(AbstractMotor::gearset::green);
 
 	left = std::make_shared<ADIEncoder>(1,2,false);
-	right = std::make_shared<ADIEncoder>(7,8,true);
+	right = std::make_shared<ADIEncoder>(7,8,false);
 	middle = std::make_shared<ADIEncoder>(3,4,false);
 
 	model = std::make_shared<ThreeEncoderXDriveModel>(
@@ -109,10 +108,10 @@ void initialize() {
 		model,
 		odom,
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0023,.0000,.00003,.00},
-			TimeUtilFactory::withSettledUtilParams(15, 5, 250_ms)),
+			{.0045,.0000,.0001,.00},
+			TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.00,.0000,.00015,.00},
+			{.0027,.0000,.00,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
 			{.00,.0000,.00003,.00},
@@ -129,12 +128,8 @@ void initialize() {
 	);
 
 	PursuitLimits limits(
-		.25_mps,
-		.1_mps2,
-		.5_mps,
-		.1_mps2,
-		.25_mps,
-		1_mps/*?*/
+		0.2_mps,  1.1_mps2, 0.75_mps,
+        0.4_mps2, 0_mps,    40_mps
 	);
 
 	paths.insert(
@@ -143,9 +138,10 @@ void initialize() {
 			PathGenerator::generate(
 				SimplePath({
 					{0_ft,0_ft},
-					{0_ft,2_ft},
-					{2_ft,2_ft},
-					{2_ft, 4_ft}})
+					{3_ft,3_ft},
+					{3_ft,6_ft},
+//					{1_ft,1_ft},
+					{6_ft, 6_ft}})
 				.generate(1_cm)
 				.smoothen(.001, 1e-10 * meter),
 				limits
@@ -167,7 +163,7 @@ void initialize() {
 		TimeUtilFactory::withSettledUtilParams(),
 		.0007,
 		.0000,
-		.000,
+		.00001,
 		.0
 	);
 	trayController->startThread();
@@ -191,7 +187,7 @@ void initialize() {
 		lift->getEncoder(),
 		lift,
 		TimeUtilFactory::withSettledUtilParams(),
-		.0007,
+		.0009,
 		.0000,
 		.000,
 		.0
@@ -205,7 +201,10 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
-				follower->followPath( paths.at(std::string("test")) );
+				odom->setState(State(3_ft, 3_ft, 0_deg));
+//				follower->followPath( paths.at(std::string("test")) );
+				controller->turnAngle(90_deg,OdomController::pointTurn,OdomController::defaultTurnSettler);
+				controller->turnAngle(-90_deg,OdomController::pointTurn,OdomController::defaultTurnSettler);
 			})
 			.button("Test", [&]() { 
 				printf("test\n");
@@ -325,15 +324,14 @@ void opcontrol() {
 		}
 
 		//LIFT
-		if(master->getDigital(ControllerDigital::right)&&!liftToggle){
+		if(master->getDigital(ControllerDigital::down)){
 			//liftController up to middle
 			liftController->setTarget(liftMiddle);
 			trayController->setTarget(trayMiddleDown);
-			liftToggle = true;
-			while(master->getDigital(ControllerDigital::right)){
+			while(master->getDigital(ControllerDigital::down)){
 				pros::delay(20);
 			}
-		}else if(master->getDigital(ControllerDigital::right)&&liftToggle){
+		}else if(master->getDigital(ControllerDigital::right)){
 			//liftController up to top
 			liftController->setTarget(liftUp);
 			trayController->setTarget(trayMiddleUp);
@@ -341,11 +339,12 @@ void opcontrol() {
 			while(master->getDigital(ControllerDigital::right)){
 				pros::delay(20);
 			}
-		}else if(master->getDigital(ControllerDigital::down)){
-			//liftController down
-			liftController->setTarget(liftDown);
+		}else if(master->getDigital(ControllerDigital::B)){
+			//stack grab
+			intake->moveVelocity(200);
 			trayController->setTarget(trayDown);
-			liftToggle = false;
+			pros::delay(500);
+			liftController->setTarget(liftDown);
 			while(master->getDigital(ControllerDigital::down)){
 				pros::delay(20);
 			}

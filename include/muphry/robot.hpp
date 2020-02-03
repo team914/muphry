@@ -18,7 +18,7 @@ extern std::shared_ptr<ThreeEncoderXDriveModel> model;
 extern std::shared_ptr<CustomOdometry> odom;
 
 //controllers
-extern std::shared_ptr<OdomXController> controller;
+extern std::shared_ptr<OdomController> controller;
 extern std::shared_ptr<PathFollower> follower;
 
 //encoders
