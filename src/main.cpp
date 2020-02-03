@@ -2,19 +2,28 @@
 #include "muphry/autons.hpp"
 
 using namespace lib7842;
+using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
+
+
 //*
 //chassis
 std::shared_ptr<ChassisController> chassis;
 std::shared_ptr<ThreeEncoderXDriveModel> model;
 std::shared_ptr<CustomOdometry> odom;
 
+//controllers
 std::shared_ptr<OdomXController> controller;
+std::shared_ptr<PathFollower> follower;
 
+//encoders
 std::shared_ptr<ADIEncoder> left;
 std::shared_ptr<ADIEncoder> right;
 std::shared_ptr<ADIEncoder> middle;
+
+//paths
+std::map<std::string,PursuitPath> paths;
 
 //intake
 std::shared_ptr<MotorGroup> intake;
@@ -90,7 +99,7 @@ void initialize() {
 
 	odom = std::make_shared<CustomOdometry>(
 		model,
-		ChassisScales({2.8_in,10_in,0.1_in,2.75_in},360),
+		ChassisScales({2.8114_in,9.883_in,.01_in,2.8114_in},360),
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);
 	odom->startTask();
@@ -100,16 +109,49 @@ void initialize() {
 		model,
 		odom,
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.002,.0000,.00003,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+			{.0023,.0000,.00003,.00},
+			TimeUtilFactory::withSettledUtilParams(15, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0035,.0000,.00015,.00},
+			{.00,.0000,.00015,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
 			{.00,.0000,.00003,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
 		TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)
 	);//*/
+
+	follower = std::make_shared<PathFollower>(
+		model,
+		odom,
+		ChassisScales({4_in,9_in},imev5GreenTPR),
+		6_in,
+		TimeUtilFactory::withSettledUtilParams(50,5,250_ms)
+	);
+
+	PursuitLimits limits(
+		.25_mps,
+		.1_mps2,
+		.5_mps,
+		.1_mps2,
+		.25_mps,
+		1_mps/*?*/
+	);
+
+	paths.insert(
+		{
+			"test",
+			PathGenerator::generate(
+				SimplePath({
+					{0_ft,0_ft},
+					{0_ft,2_ft},
+					{2_ft,2_ft},
+					{2_ft, 4_ft}})
+				.generate(1_cm)
+				.smoothen(.001, 1e-10 * meter),
+				limits
+			)
+		}
+	);
 
 	intake = std::make_shared<MotorGroup>(MotorGroup({11,-18}));
 	intake->setGearing(AbstractMotor::gearset::green);
@@ -163,7 +205,7 @@ void initialize() {
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
-				;
+				follower->followPath( paths.at(std::string("test")) );
 			})
 			.button("Test", [&]() { 
 				printf("test\n");

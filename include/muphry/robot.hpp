@@ -17,12 +17,17 @@ extern std::shared_ptr<ChassisController> chassis;
 extern std::shared_ptr<ThreeEncoderXDriveModel> model;
 extern std::shared_ptr<CustomOdometry> odom;
 
+//controllers
 extern std::shared_ptr<OdomXController> controller;
+extern std::shared_ptr<PathFollower> follower;
 
+//encoders
 extern std::shared_ptr<ADIEncoder> left;
 extern std::shared_ptr<ADIEncoder> right;
 extern std::shared_ptr<ADIEncoder> middle;
 
+//paths
+extern std::map<std::string,PursuitPath> paths;
 
 //intake
 extern std::shared_ptr<MotorGroup> intake;
