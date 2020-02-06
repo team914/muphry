@@ -66,9 +66,9 @@ bool Auton::small(bool red){
 bool Auton::test(bool turn){
 	if(turn){
         auto angle = 360_deg;
-        chassis->turnAngle(angle);
+//        chassis->turnAngle(angle);
         pros::delay(500);
-        chassis->turnAngle(-angle);
+//        chassis->turnAngle(-angle);
         pros::delay(500);
     }else if(turn){
         auto distance = 24_in;

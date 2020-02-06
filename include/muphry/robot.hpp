@@ -13,12 +13,11 @@ using namespace lib7842;
 using namespace okapi;
 
 //chassis
-extern std::shared_ptr<ChassisController> chassis;
 extern std::shared_ptr<ThreeEncoderXDriveModel> model;
 extern std::shared_ptr<CustomOdometry> odom;
 
 //controllers
-extern std::shared_ptr<OdomController> controller;
+extern std::shared_ptr<OdomXController> controller;
 extern std::shared_ptr<PathFollower> follower;
 
 //encoders
@@ -52,6 +51,8 @@ extern std::shared_ptr<AsyncPosPIDController> liftController;
 extern double liftUp;
 extern double liftMiddle;
 extern double liftDown;
+extern bool liftMiddleDownToggle;
+extern bool liftMiddleUpToggle;
 
 //controller
 extern std::shared_ptr<Controller> master;
