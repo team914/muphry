@@ -46,8 +46,8 @@ bool trayMiddleDownToggle = false;
 std::shared_ptr<Motor> lift;
 std::shared_ptr<AsyncPosPIDController> liftController;
 
-double liftUp = 2000;
-double liftMiddle = 1400;
+double liftUp = 2300;
+double liftMiddle = 2000;
 double liftDown = -50;
 
 //controller
@@ -63,8 +63,8 @@ void initialize() {
 
 	std::shared_ptr<Motor> topRight = std::make_shared<Motor>(-9);
 	std::shared_ptr<Motor> topLeft = std::make_shared<Motor>(2);
-	std::shared_ptr<Motor> bottomLeft = std::make_shared<Motor>(1);
-	std::shared_ptr<Motor> bottomRight = std::make_shared<Motor>(-20);
+	std::shared_ptr<Motor> bottomLeft = std::make_shared<Motor>(20);
+	std::shared_ptr<Motor> bottomRight = std::make_shared<Motor>(-1);
 
 	bottomLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
 	bottomLeft->setGearing(AbstractMotor::gearset::green);
@@ -168,7 +168,7 @@ void initialize() {
 		tray->getEncoder(),
 		tray,
 		TimeUtilFactory::withSettledUtilParams(),
-		.001,
+		.0015,
 		.0000,
 		.000,
 		.0
@@ -334,6 +334,8 @@ void autonomous() {
 
 void opcontrol() {
 
+	printf("opcontrol\n");
+
 	trayController->flipDisable(false);
 
 	bool intakeToggle = false;
@@ -355,9 +357,9 @@ void opcontrol() {
 		yaw = master->getAnalog(ControllerAnalog::leftX);
 
 		if(tray->getEncoder()->get()>2000){
-			forward /= 4;
-			right /= 4;
-			yaw /= 4;
+			forward /= 2;
+			right /= 2;
+			yaw /= 2;
 		}
 
 		model->xArcade(right, forward, yaw, 0.1);
@@ -409,12 +411,11 @@ void opcontrol() {
 			trayController->setTarget(trayDown);
 			liftController->setTarget(liftDown);
 			pros::delay(250);
-			intake->moveVelocity(-200);
-			controller->moveDistance(-12_in);
-			intake->moveVelocity(0);//*/
+//			controller->moveDistance(-12_in);
 
 			while(master->getDigital(ControllerDigital::L2)){
 				pros::delay(20);
+				intake->moveVelocity(-200);
 			}
 		}
 
@@ -442,10 +443,10 @@ void opcontrol() {
 			if(lift->getEncoder()->get()>1000){
 				liftController->setTarget(liftDown);
 				trayController->setTarget(trayDown);
-				intake->moveVoltage(-12000);
+				intake->moveVoltage(-8000);
 				pros::delay(250);
 				intake->moveVoltage(0);
-				controller->moveDistance(-6_in);
+//				controller->moveDistance(-6_in);
 			}
 			while(master->getDigital(ControllerDigital::right)){
 				pros::delay(20);
