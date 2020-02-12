@@ -91,24 +91,20 @@ void initialize() {
 	);
 
 	PathfinderLimits limits{1,1,1};
+	ChassisScales scales({4_in,10_in},imev5RedTPR);
+
+	controller = AsyncMotionProfileControllerBuilder()
+		.withOutput(
+			model,
+			scales,
+			AbstractMotor::GearsetRatioPair(AbstractMotor::gearset::red,1)
+		)
+		.withLimits(limits)
+		.buildMotionProfileController();
+	
+	
 
 	//*
-	controller = std::make_shared<AsyncMotionProfileController>(
-		TimeUtilFactory().create(),
-		limits,
-		model,
-		ChassisScales({4_in,10_in},imev5GreenTPR),
-		AbstractMotor::GearsetRatioPair(AbstractMotor::gearset::green,1)
-	);//*/
-	controller->startThread();
-	controller->generatePath(
-		{
-			PathfinderPoint{0_ft,0_in,0_deg},
-			PathfinderPoint{0_ft,24_in,0_deg}
-		},
-		std::string("test")
-	);
-
 	intake = std::make_shared<MotorGroup>(MotorGroup({11,-18}));
 	intake->setGearing(AbstractMotor::gearset::green);
 
