@@ -77,7 +77,12 @@ bool Auton::test(bool turn){
 //        backwardChassis->moveDistance(-distance);
         pros::delay(500);
     }
+}
 
+bool Auton::moveToPoint(Vector vector){
+	controller->turnToPoint(vector);
+	pros::delay(10);
+	controller->strafeToPoint(vector);
 }
 
 bool Auton::random(){

@@ -12,6 +12,8 @@ class Auton{
     static bool big(bool red = true);
     static bool test(bool turn = true);
 
+    static bool moveToPoint(Vector vector);
+
     static bool random();
 
 };
