@@ -63,6 +63,43 @@ bool Auton::small(bool red){
     return true;
 }
 
+bool Auton::skills(){
+
+				odom->setState(State(7_in, 27_in, 90_deg));
+
+				intake->moveVoltage(12000);
+
+				follower->followPath(paths.at("skills9Cube"));
+
+				intake->moveVelocity(0);
+//*
+
+				controller->strafeToPoint(Vector{121.7_in,15.69_in});				
+
+				controller->strafeToPoint(Vector{129.75_in,12.00_in});	
+
+				intake->moveVoltage(-12000);
+				pros::delay(250);
+				intake->moveVoltage(12000);
+				pros::delay(100);
+				intake->moveVoltage(0);
+
+				trayController->flipDisable(false);
+				trayController->setTarget(4950);
+				pros::delay(250);
+				trayController->waitUntilSettled();
+
+				pros::delay(500);
+//				controller->strafeToPoint(Vector{128.0_in,9_in});
+				pros::delay(500);
+
+				intake->moveVoltage(-8000);
+				trayController->setTarget(0);
+				controller->strafeToPoint(Vector{118.4_in,20_in});
+//*/
+
+}
+
 bool Auton::test(bool turn){
 	if(turn){
         auto angle = 360_deg;

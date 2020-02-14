@@ -112,10 +112,10 @@ void initialize() {
 			TimeUtilFactory::withSettledUtilParams(75, 10, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
 			{.02,.0000,.001,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+			TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
 			{.05,.0000,.0000,.00},
-			TimeUtilFactory::withSettledUtilParams(25, 5, 250_ms)),
+			TimeUtilFactory::withSettledUtilParams(25, 5, 100_ms)),
 		TimeUtilFactory().create()
 	);//*/
 
@@ -123,29 +123,59 @@ void initialize() {
 		model,
 		odom,
 		ChassisScales({4_in,9_in},imev5GreenTPR),
-		4_in,
+		2_in,
 		TimeUtilFactory().create()
 	);
 
 	PursuitLimits limits(
-		0.2_mps,  1.1_mps2, 1_mps,
+		0.2_mps,  1.1_mps2, .35_mps,
         0.4_mps2, 0_mps,    40_mps
 	);
 
 	paths.insert(
 		{
-			"test",
+			"skills9Cube",
 			PathGenerator::generate(
 				SimplePath({
-					{20.0_in,27.0_in},
+					/*{20.0_in,27.0_in},
 					{40.0_in,26.4_in},
 					{47.2_in,26.9_in},
-					{60.8_in,28.6_in}/*,
-					{51.3_in,41.0_in},
-					{50.1_in,50.1_in},
-					{33.2_in,53.2_in}//*/
+					{71.4_in,18.3_in},
+					{80.6_in,26.9_in},
+					{103.3_in,25.3_in},
+					{108.7_in,24.6_in},
+					{118.0_in,19.3_in},
+					{120.1_in,14.0_in}//*/
+
+					//start pos
+					{7.0_in,26.9_in},
+					//first cube
+					{22.95_in,26.97_in},
+					//4th cube
+					{41.51_in,26.08_in},
+					//avoid tower
+					{52.25_in,14.84_in},
+					//grab cube
+					{60.96_in,14.04_in},
+					//grab cube
+					{66.96_in,14.04_in},
+//*
+					//grab sixth cube
+					{82.47_in,22.49_in},
+					//ninth cube
+					{103.21_in,22.66_in},
+					//turn 1
+					{113.03_in,25.10_in},
+					//turn 2
+					{121.51_in,19.19_in},
+					//turn 3
+					{123.58_in,16.18_in},
+					//turn 4
+					{125.09_in,11.79_in}
+					//{_in,_in},//*/
+
 				})
-				.generate(1_cm)
+				.generate(.5_cm)
 				.smoothen(.001, 1e-10 * meter),
 				limits
 			)
@@ -195,35 +225,6 @@ void initialize() {
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
 
-				auto time = pros::millis();
-
-				odom->setState(State(7_in, 27_in, 90_deg));
-
-				intake->moveVoltage(12000);
-				follower->followPath(paths.at("test"));
-/*
-				controller->moveDistance(-30_in);
-
-				controller->turnToPoint(Vector{-18_in,0_in});
-				controller->strafeToPoint(Vector{13.2_in,12.0_in});
-				intake->moveVoltage(-12000);
-				pros::delay(350);
-				intake->moveVoltage(12000);
-				pros::delay(100);
-				intake->moveVoltage(0);
-
-				trayController->flipDisable(false);
-				trayController->setTarget(4950);
-				pros::delay(500);
-				trayController->waitUntilSettled();
-
-				intake->moveVoltage(-8000);
-				trayController->setTarget(0);
-				controller->strafeToPoint(Vector{21_in,21_in});
-				intake->moveVoltage(0);
-//*/
-
-				master->setText(0,0,std::to_string(pros::millis()-time));
 			})
 			.button("Test", [&]() { 
 				printf("test\n");
@@ -271,11 +272,15 @@ void disabled() {
 void competition_initialize() {}
 
 void autonomous() {
+	auto time = pros::millis();
+
 	trayController->flipDisable(true);
 
 	selector->run();
 
 	trayController->flipDisable(false);
+	
+	master->setText(0,0,std::to_string(pros::millis()-time));
 }
 
 void opcontrol() {
@@ -360,31 +365,24 @@ void opcontrol() {
 
 		//LIFT
 		if(master->getDigital(ControllerDigital::down)){
-			/*
-			//liftController up to middle
-			liftController->setTarget(liftMiddle);
-			trayController->setTarget(trayMiddleDown);
-			intake->moveVoltage(-8000);
-			pros::delay(250);
-			intake->moveVoltage(0);
+			//*
+			//liftController up to top
+			liftController->setTarget(liftUp);
+			trayController->setTarget(trayMiddleUp);
 			if(lift->getEncoder()->get()>1000){
 				liftController->setTarget(liftDown);
 				trayController->setTarget(trayDown);
-				controller->moveDistance(-6_ft);
 			}//*/
 			while(master->getDigital(ControllerDigital::down)){
 				pros::delay(20);
 			}
 		}else if(master->getDigital(ControllerDigital::right)){
-			//liftController up to top
-			liftController->setTarget(liftUp);
+			//liftController up to middle
+			liftController->setTarget(liftMiddle);
 			trayController->setTarget(trayMiddleUp);			
 			if(lift->getEncoder()->get()>1000){
 				liftController->setTarget(liftDown);
 				trayController->setTarget(trayDown);
-				intake->moveVoltage(-8000);
-				pros::delay(250);
-				intake->moveVoltage(0);
 //				controller->moveDistance(-6_in);
 			}
 			while(master->getDigital(ControllerDigital::right)){
@@ -405,3 +403,4 @@ void opcontrol() {
 		pros::delay(20);
 	}
 }
+

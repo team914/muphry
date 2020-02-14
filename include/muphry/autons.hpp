@@ -10,6 +10,7 @@ class Auton{
 
     static bool small(bool red = true);
     static bool big(bool red = true);
+    static bool skills();
     static bool test(bool turn = true);
 
     static bool moveToPoint(Vector vector);
