@@ -1,119 +1,86 @@
 #include "muphry/autons.hpp"
 
-bool Auton::small(bool red){
-	viciousTrayController->flipDisable(false);
-	trayController->flipDisable(true);
-
-	//flipout
-	intake->moveVelocity(-100);
-	viciousTrayController->setTarget(.41*4095);
-	pros::delay(1000);
-//	backwardChassis->waitUntilSettled();
-	intake->moveVelocity(0);
-	viciousTrayController->setTarget(.0001*4095);
-	pros::delay(500);
-
-	//grab 4 cubes
-	intake->moveVelocity(100);
-//	backwardModel->setMaxVelocity(150);
-//	backwardChassis->moveDistance(40_in);
-
-	//move back
-//	backwardChassis->setMaxVelocity(200);
-//	backwardChassis->moveDistanceAsync(-20_in);
-	pros::delay(1000);
-	intake->moveVelocity(0);
-//	backwardChassis->waitUntilSettled();
-
-	//turn to zone
-//	backwardModel->setMaxVelocity(150);
-	if(red){
-//		backwardChassis->turnAngle(120_deg);
-	}else{
-//		backwardChassis->turnAngle(-120_deg);
-	}
-	pros::delay(10);
-
-	//move to zone
-//	backwardChassis->moveDistanceAsync(17_in);
-	intake->moveVelocity(-100);
-	pros::delay(500);
-	intake->moveVelocity(100);
-	pros::delay(500);
-	intake->moveVelocity(0);
-//	backwardChassis->waitUntilSettled();
-
-	//stack
-	viciousTrayController->setTarget(.41*4095);
-	pros::delay(500);
-	intake->moveVelocity(100);
-	pros::delay(500);
-	intake->moveVelocity(0);
-	viciousTrayController->waitUntilSettled();
-
-	//move away
-	viciousTrayController->setTarget(.0001*4095);
-//	backwardChassis->moveDistanceAsync(-18_in);
-	pros::delay(250);
-	intake->moveVelocity(-100);
-//	backwardChassis->waitUntilSettled();
-	intake->moveVelocity(0);
-
-    //end
-    return true;
+bool Auton::alignCubes(){
+				intake->moveVoltage(-12000);
+				pros::delay(550);
+				intake->moveVoltage(12000);
+				pros::delay(100);
+				intake->moveVoltage(0);
+				return true;
 }
 
-bool Auton::skills(){
+bool Auton::stackForward(const Vector& vector){
+				trayController->flipDisable(false);
+				trayController->setTarget(4950);
+				pros::delay(2300);
+				controller->strafeToPoint(vector);
+				return true;
+}
+
+bool Auton::stackBackward(const Vector& vector){
+				intake->moveVoltage(-8000);
+				trayController->setTarget(0);
+				controller->strafeToPoint(vector,OdomController::makeAngleCalculator(odom->getState().theta));
+				return true;
+}
+
+bool Auton::small(bool red){
 
 				odom->setState(State(7_in, 27_in, 90_deg));
 
 				intake->moveVoltage(12000);
 
-				follower->followPath(paths.at("skills9Cube"));
-
-				intake->moveVelocity(0);
+				follower->followPath(paths.at("redSide"));
 //*
+				controller->turnToPoint(Vector{20_in,23_in});
+				controller->strafeToPoint(Vector{20_in,23_in});
 
-				controller->strafeToPoint(Vector{121.7_in,15.69_in});				
+				controller->turnToPoint(Vector{10.27_in,14.75_in});
+				controller->strafeToPoint(Vector{10.27_in,14.75_in},OdomController::makeAngleCalculator(-131_deg));
+				Auton::alignCubes();
+				stackForward(Vector(State(odom->getState())));
+				pros::delay(500);
+				Auton::stackBackward(Vector{18.61_in,30.50_in});//*/
 
-				controller->strafeToPoint(Vector{129.75_in,12.00_in});	
-
-				intake->moveVoltage(-12000);
-				pros::delay(250);
-				intake->moveVoltage(12000);
-				pros::delay(100);
 				intake->moveVoltage(0);
+}
 
-				trayController->flipDisable(false);
-				trayController->setTarget(4950);
-				pros::delay(250);
-				trayController->waitUntilSettled();
+bool Auton::skills(){
 
-				pros::delay(500);
-//				controller->strafeToPoint(Vector{128.0_in,9_in});
-				pros::delay(500);
+	odom->setState(State(7_in, 27_in, 90_deg));
 
-				intake->moveVoltage(-8000);
-				trayController->setTarget(0);
-				controller->strafeToPoint(Vector{118.4_in,20_in});
+	intake->moveVelocity(12000);
+
+//*
+	controller->strafeToPoint(Vector{21.9_in,27.7_in}, OdomController::makeAngleCalculator(91.5_deg));
+	pros::delay(250);
+	controller->strafeToPoint(Vector{31.9_in,27.7_in}, OdomController::makeAngleCalculator(91.5_deg));
+	pros::delay(250);
+	controller->strafeToPoint(Vector{44.4_in,28.0_in}, OdomController::makeAngleCalculator(87.2_deg));
+	pros::delay(250);
+	controller->strafeToPoint(Vector{53.4_in,28.0_in}, OdomController::makeAngleCalculator(87.2_deg));
+	pros::delay(250);
+	controller->strafeToPoint(Vector{44.4_in,28.0_in}, OdomController::makeAngleCalculator(87.2_deg));
+	pros::delay(250);
+	controller->strafeToPoint(Vector{57.3_in,38.5_in}, OdomController::makeAngleCalculator(-2.0_deg));
+	pros::delay(250);
 //*/
+
+	return true;
 
 }
 
 bool Auton::test(bool turn){
-	if(turn){
-        auto angle = 360_deg;
-//        chassis->turnAngle(angle);
-        pros::delay(500);
-//        chassis->turnAngle(-angle);
-        pros::delay(500);
-    }else if(turn){
-        auto distance = 24_in;
-//        backwardChassis->moveDistance(distance);
-        pros::delay(500);
-//        backwardChassis->moveDistance(-distance);
-        pros::delay(500);
-    }
+	odom->setState(State(7_in, 27_in, 90_deg));
+	intake->moveVoltage(12000);
+	controller->strafeToPoint(Vector{31_in,27_in},OdomController::makeAngleCalculator(odom->getState().theta) );
+	controller->turnToPoint(Vector{14_in,51_in});	
+	controller->strafeToPoint(Vector{14_in,51_in},OdomController::makeAngleCalculator(odom->getState().theta));	
+	controller->strafeToPoint(Vector{10_in,27_in},OdomController::makeAngleCalculator(90_deg));
+	controller->strafeToPoint(Vector{7_in,27_in},OdomController::makeAngleCalculator(90_deg));
+	intake->moveVoltage(-12000);
+	pros::delay(3000);
+	intake->moveVoltage(0);
 }
 
 bool Auton::moveToPoint(Vector vector){
