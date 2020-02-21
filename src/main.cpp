@@ -8,11 +8,11 @@ using namespace okapi::literals;
 
 //*
 //chassis
-std::shared_ptr<ThreeEncoderXDriveModel> model;
+std::shared_ptr<ThreeEncoderSkidSteerModel> model;
 std::shared_ptr<CustomOdometry> odom;
 
 //controllers
-std::shared_ptr<OdomXController> controller;
+std::shared_ptr<OdomController> controller;
 std::shared_ptr<PathFollower> follower;
 
 //sensors
@@ -56,22 +56,27 @@ std::shared_ptr<GUI::Screen> screen;
 GUI::Selector* selector;
 //*/
 
+bool encoderCatchup = false;
+
 void initialize() {
 	printf("init\n");
 
-	std::shared_ptr<Motor> topRight = std::make_shared<Motor>(-9);
-	std::shared_ptr<Motor> topLeft = std::make_shared<Motor>(2);
-	std::shared_ptr<Motor> bottomLeft = std::make_shared<Motor>(20);
-	std::shared_ptr<Motor> bottomRight = std::make_shared<Motor>(-1);
+	Motor topRight   (-9);
+	Motor topLeft    (2);
+	Motor bottomLeft (20);
+	Motor bottomRight(-1);
 
-	bottomLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomLeft->setGearing(AbstractMotor::gearset::red);
-	bottomRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomRight->setGearing(AbstractMotor::gearset::red);
-	topLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topLeft->setGearing(AbstractMotor::gearset::red);
-	topRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topRight->setGearing(AbstractMotor::gearset::red);
+	MotorGroup leftGroup(
+		{
+			topLeft,bottomLeft
+		}
+	);
+
+	MotorGroup rightGroup(
+		{
+			topRight,bottomRight
+		}
+	);
 
 	left = std::make_shared<ADIEncoder>(1,2,false);
 	right = std::make_shared<ADIEncoder>(7,8,false);
@@ -83,11 +88,9 @@ void initialize() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 	
-	model = std::make_shared<ThreeEncoderXDriveModel>(
-		topLeft,
-		topRight,
-		bottomRight,
-		bottomLeft,
+	model = std::make_shared<ThreeEncoderSkidSteerModel>(
+		std::make_shared<MotorGroup>(leftGroup),
+		std::make_shared<MotorGroup>(rightGroup),
 		left,
 		right,
 		middle,
@@ -101,22 +104,23 @@ void initialize() {
 		TimeUtilFactory().create()
 	);
 	odom->setState(State(0_in, 0_in, 0_deg));
+	odom->startTask();
 
-	//*
-	controller = std::make_shared<OdomXController>(
+	controller = std::make_shared<OdomController>(
 		model,
 		odom,
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0045,.0000,.0001,.00},
-			TimeUtilFactory::withSettledUtilParams(75, 10, 250_ms)),
+			{.006,.0000,.00015,.00},
+			TimeUtilFactory::withSettledUtilParams(35, 10, 250_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.02,.0000,.001,.00},
-			TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)),
+			{.02,.0000,.0002,.00},
+			TimeUtilFactory::withSettledUtilParams(5, 5, 100_ms)),
 		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
 			{.017,.0000,.0000,.00},
 			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
+		6_in,
 		TimeUtilFactory().create()
-	);//*/
+	);
 
 	follower = std::make_shared<PathFollower>(
 		model,
@@ -233,6 +237,7 @@ void initialize() {
     	&screen->makePage<GUI::Selector>("Selector")
 			.button("Default", [&]() {
 				Auton::skills();
+//				Auton::test(true);
 			})
 			.button("Test", [&]() { 
 				printf("test\n");
@@ -268,17 +273,26 @@ void initialize() {
 		.withGrid(2,4)
 		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); pros::delay(100); })
 		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); pros::delay(100); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getBottomLeftMotor()->getTemperature(); pros::delay(100); })
+		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getLeftSideMotor()->getTemperature(); pros::delay(100); })
 		.withSeries("Lift", LV_COLOR_MAKE(255,255,255), []() { return lift->getTemperature(); pros::delay(100); });
 
 	printf("init end\n");
 }
 
-void disabled() {}
+void disabled() {
+	pros::delay(500);
+	odom->startTask();
+	encoderCatchup = true;
+}
 
 void competition_initialize() {}
 
 void autonomous() {
+	if(!encoderCatchup){
+		pros::delay(500);
+		odom->startTask();
+		encoderCatchup = true;
+	}
 	auto time = pros::millis();
 
 	trayController->flipDisable(true);
@@ -292,11 +306,10 @@ void autonomous() {
 
 void opcontrol() {
 
-	odom->setState(State(7_in,27_in, 0_deg));
-
 	printf("opcontrol\n");
 
-	trayController->flipDisable(false);
+	trayController->setTarget(trayDown);
+	liftController->setTarget(liftDown);
 
 	bool intakeToggle = false;
 
@@ -321,7 +334,7 @@ void opcontrol() {
 			yaw /= 2;
 		}
 
-		model->xArcade(right, forward, yaw, 0.1);
+		model->tank(forward + yaw,forward - yaw, 0.1);
 
 		//INTAKE
 		if(master->getDigital(ControllerDigital::Y)){
@@ -338,18 +351,26 @@ void opcontrol() {
 			intake->moveVoltage(12000);
 			intakeToggle = false;
 		}else if(master->getDigital(ControllerDigital::R2)){
-			intake->moveVoltage(-12000);
+			if(tray->getEncoder()->get()>1000 || lift->getEncoder()->get()>1000){
+				intake->moveVoltage(-6000);
+			}else{
+				intake->moveVoltage(-12000);
+			}
 			intakeToggle = false;
 		}else if(intakeToggle){
-			intake->moveVoltage(8000);
+			intake->moveVoltage(12000);
 		}else{
 			intake->moveVelocity(0);
 		}
 
 		//TRAY
 		if(master->getDigital(ControllerDigital::L1)){
-			//trayController up			
-			trayController->setTarget(4950);
+			//trayController up		
+			if(lift->getEncoder()->get() > 1000){
+				liftController->setTarget(liftDown);				
+			}else{
+				trayController->setTarget(4950);
+			}
 			pros::delay(20);
 		}else if(master->getDigital(ControllerDigital::L2)){
 			//trayController down
@@ -360,43 +381,34 @@ void opcontrol() {
 
 		//LIFT
 		if(master->getDigital(ControllerDigital::down)){
-			//liftController middle up
-			auto time = TimeUtilFactory().create();
-
-			bool exit = false;
-
-			while(!exit){
-				if(time.getTimer()->getDtFromStart().convert(millisecond) < 250 && master->getDigital(ControllerDigital::down) ){
-					liftController->setTarget(liftUp);
-					trayController->setTarget(trayMiddleUp);
-					if(lift->getEncoder()->get()>1000){
-						liftController->setTarget(liftDown);
-						trayController->setTarget(trayDown);
-					}
-					exit = true;
-				}else if(!master->getDigital(ControllerDigital::down)){
-					exit = true;
-				}
+			//liftController up
+			if(lift->getEncoder()->get() > 1000){
+//				liftController->setTarget(liftDown);
+//				trayController->setTarget(trayDown);
+			}else if(tray->getEncoder()->get() < 3000){
+				liftController->setTarget(liftUp);
+				trayController->setTarget(trayMiddleUp);
 			}
 			while(master->getDigital(ControllerDigital::down)){
 				pros::delay(20);
 			}
 		}else if(master->getDigital(ControllerDigital::right)){
-			//liftController up
-			liftController->setTarget(liftMiddle);
-			trayController->setTarget(trayMiddleUp);			
-			if(lift->getEncoder()->get()>1000){
+			//liftController middle
+			if(lift->getEncoder()->get() > 1000 ){
 				liftController->setTarget(liftDown);
 				trayController->setTarget(trayDown);
+			}else if(tray->getEncoder()->get() < 3000){
+				liftController->setTarget(liftMiddle);
+				trayController->setTarget(trayMiddleUp);
 			}
-			while(master->getDigital(ControllerDigital::right)){
+			while(master->getDigital(ControllerDigital::down)){
 				pros::delay(20);
-			}
+			}			
 		}else if(master->getDigital(ControllerDigital::B)){
-			//nothing
+			//move backward
+			controller->moveDistance(-42_in);
 		}
-		
+
 		pros::delay(20);
 	}
 }
-

@@ -1,5 +1,5 @@
 #include "muphry/robot.hpp"
-
+/*
 void overheatWarn(){
 //	while(true){
 		std::string out;
@@ -58,4 +58,4 @@ void overheatWarn(){
 		}
 		pros::delay(20);
 //	}
-}
+}//*/

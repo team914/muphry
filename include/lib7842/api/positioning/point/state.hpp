@@ -13,9 +13,7 @@ class State : public Vector {
 public:
   QAngle theta {0_rad};
 
-  using Vector::Vector;
-  State(const State& istate) = default;
-  virtual ~State() = default;
+  State() = default;
 
   /**
    * Create a new state
@@ -61,6 +59,6 @@ public:
    *
    * @param  ipoint The point
    */
-  QAngle angleTo(const Vector& ipoint) const;
+  QAngle angleTo(const Vector& ipoint) const override;
 };
 } // namespace lib7842
