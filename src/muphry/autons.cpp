@@ -29,24 +29,62 @@ bool Auton::stackBackward(const Vector& vector){
 }
 
 bool Auton::small(bool red){
+	odom->setState(State(0_in, 0_in, 90_deg));
 
-				odom->setState(State(7_in, 27_in, 90_deg));
+	liftController->setTarget(liftMiddle);
+	trayController->setTarget(trayMiddleUp);
+	intake->moveVelocity(-12000);
 
-				intake->moveVoltage(12000);
+	pros::delay(1000);
 
-				follower->followPath(paths.at("redSide"));
-//*
-				controller->turnToPoint(Vector{20_in,23_in});
-				//controller->strafeToPoint(Vector{20_in,23_in});
+	liftController->setTarget(liftDown);
+	trayController->setTarget(trayDown);
+	intake->moveVelocity(0);
 
-				controller->turnToPoint(Vector{10.27_in,14.75_in});
-				//controller->strafeToPoint(Vector{10.27_in,14.75_in},OdomController::makeAngleCalculator(-131_deg));
-				Auton::alignCubes();
-				stackForward(Vector(State(odom->getState())));
-				pros::delay(500);
-				Auton::stackBackward(Vector{18.61_in,30.50_in});//*/
+	pros::delay(1000);
 
-				intake->moveVoltage(0);
+	model->setMaxVoltage(6000);
+	pros::delay(10);
+
+	intake->moveVoltage(12000);
+	pros::delay(10);
+
+	controller->moveDistanceAtAngle(12_in,OdomController::makeAngleCalculator(90_deg),0);
+
+/*
+	controller->moveDistanceAtAngle(55_in,OdomController::makeAngleCalculator(90_deg),0);
+	pros::delay(10);
+	intake->moveVoltage(0);
+	
+	controller->moveDistanceAtAngle(-12_in,OdomController::makeAngleCalculator(90_deg),0);
+	pros::delay(10);
+
+	controller->turnToAngle(220_deg);//this worked at one point
+
+	pros::delay(10);
+
+	controller->moveDistanceAtAngle(36_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	trayController->flipDisable(false);
+	trayController->setTarget(trayUp);
+	pros::delay(10);
+
+	intake->moveVoltage(-10000);
+	pros::delay(200);
+	intake->moveVoltage(0);
+	pros::delay(2000);
+
+	intake->moveVoltage(-12000);
+	pros::delay(300);
+	intake->moveVoltage(0);
+
+	controller->moveDistanceAtAngle(-18_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	trayController->setTarget(trayDown);
+	
+	lift
+
+	intake->moveVoltage(0);
+
+	return true;//*/
 }
 
 bool Auton::skills(){
@@ -55,7 +93,6 @@ bool Auton::skills(){
 
 	intake->moveVelocity(12000);
 
-//*
 	//controller->strafeToPoint(Vector{21.9_in,27.7_in}, OdomController::makeAngleCalculator(91.5_deg));
 	pros::delay(250);
 	//controller->strafeToPoint(Vector{31.9_in,27.7_in}, OdomController::makeAngleCalculator(91.5_deg));
@@ -69,42 +106,79 @@ bool Auton::skills(){
 	//controller->strafeToPoint(Vector{57.3_in,38.5_in}, OdomController::makeAngleCalculator(-2.0_deg));
 	pros::delay(250);
 //*/
-
-	model->setMaxVoltage(10000);
+//*
 	odom->setState(State(0_in, 0_in, 90_deg));
 
-	intake->moveVoltage(12000);
-
-	controller->moveDistanceAtAngle(23_in,OdomController::makeAngleCalculator(90_deg),0);
-	controller->moveDistanceAtAngle(6_in,OdomController::makeAngleCalculator(90_deg),0);
-
-	liftController->setTarget(liftUp/3);
+	liftController->setTarget(liftMiddle);
 	trayController->setTarget(trayMiddleUp);
-	pros::delay(500);
-	controller->moveDistanceAtAngle(6_in,OdomController::makeAngleCalculator(90_deg),0);
-	liftController->setTarget(liftDown);
-	trayController->setTarget(trayDown);
+	intake->moveVelocity(-12000);
+
+//	controller->moveDistanceAtAngle(12_in,OdomController::makeAngleCalculator(90_deg),0);
+	controller->turnToAngle(90_deg);//this worked at one point
+
 	pros::delay(1000);
 
-	model->setMaxVoltage(12000);
-//	controller->turnToAngle(63.5_deg);//this worked at one point
-	controller->moveDistanceAtAngle(-25_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
-	controller->turnToAngle(0_deg);
+	liftController->setTarget(liftDown);
+	trayController->setTarget(trayDown);
+	intake->moveVelocity(0);
 
-	controller->moveDistanceAtAngle(-26_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
-	controller->turnToAngle(85_deg);
+	pros::delay(1000);
+	controller->turnToAngle(90_deg);//this worked at one point
 
-//	controller->turnToAngle(72_deg);//this worked at one point
+	model->setMaxVoltage(6000);
+	pros::delay(10);
 
-	model->setMaxVoltage(4000);
-//	controller->moveDistanceAtAngle(20_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	intake->moveVoltage(12000);
+	pros::delay(10);
+
+	controller->moveDistanceAtAngle(50_in,OdomController::makeAngleCalculator(90_deg),0);
+	pros::delay(10);
+	intake->moveVoltage(0);
+	
+	controller->moveDistanceAtAngle(-37_in,OdomController::makeAngleCalculator(90_deg),0);
+	pros::delay(10);
+
+	controller->turnToAngle(220_deg);//this worked at one point
+
+	pros::delay(10);
+//*
+	controller->moveDistanceAtAngle(16_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	trayController->flipDisable(false);
+	trayController->setTarget(trayUp);
+	pros::delay(10);
+
+	intake->moveVoltage(-10000);
+	pros::delay(200);
+	intake->moveVoltage(0);
+	pros::delay(2000);
 
 	intake->moveVoltage(-12000);
-	pros::delay(250);
+	pros::delay(300);
+	intake->moveVoltage(0);
+
+	controller->moveDistanceAtAngle(-33_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	pros::delay(10);
+	trayController->setTarget(trayDown);
+	pros::delay(10);
+
+	controller->turnToAngle(90_deg);//this worked at one point
+
 	intake->moveVoltage(12000);
 
-//	controller->moveDistanceAtAngle(20_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	controller->moveDistanceAtAngle(30_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
 
+	pros::delay(250);
+	intake->moveVoltage(0);
+
+	liftController->setTarget(liftMiddle);
+	
+	controller->moveDistanceAtAngle(-12_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	intake->moveVoltage(-6000);
+	controller->moveDistanceAtAngle(12_in,OdomController::makeAngleCalculator(odom->getState().theta),0);
+	pros::delay(250);
+	intake->moveVoltage(0);
+	//*/
+	
 	return true;
 }
 
@@ -120,9 +194,21 @@ bool Auton::test(bool turn){
 	pros::delay(3000);
 	intake->moveVoltage(0);
 	//*/
-	odom->setState(State(0_in, 0_in, 90_deg));
-	controller->turnAngle(60_deg);
-	controller->turnAngle(-60_deg);
+	odom->setState(State(0_in, 0_in, 0_deg));
+	controller->moveDistance(-24_in);
+	controller->moveDistance(24_in);
+
+	liftController->setTarget(liftMiddle);
+	trayController->setTarget(trayMiddleUp);
+	intake->moveVelocity(-12000);
+
+	pros::delay(1000);
+
+	liftController->setTarget(liftDown);
+	trayController->setTarget(trayDown);
+	intake->moveVelocity(0);
+
+	pros::delay(1000);	
 }
 
 bool Auton::moveToPoint(Vector vector){
@@ -132,7 +218,6 @@ bool Auton::moveToPoint(Vector vector){
 }
 
 bool Auton::random(){
-
     //one cube
 	printf("redBig");
 //	backwardChassis->moveDistance(-5_in);
@@ -156,5 +241,4 @@ bool Auton::random(){
 	intake->moveVelocity(-100);
 //	backwardChassis->waitUntilSettled();
 	intake->moveVelocity(0);				 
-
 }

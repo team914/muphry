@@ -14,11 +14,12 @@ using namespace okapi;
 
 //chassis
 extern std::shared_ptr<ThreeEncoderSkidSteerModel> model;
+extern std::shared_ptr<ChassisControllerIntegrated> controller;
 extern std::shared_ptr<CustomOdometry> odom;
 
 //controllers
-extern std::shared_ptr<OdomController> controller;
-extern std::shared_ptr<PathFollower> follower;
+extern std::shared_ptr<AsyncLinearMotionProfileController> linearController;
+extern std::shared_ptr<AsyncMotionProfileController> profileController;
 
 //encoders
 extern std::shared_ptr<ADIEncoder> left;
