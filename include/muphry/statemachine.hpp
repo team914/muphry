@@ -2,6 +2,8 @@
 
 #include "lib7842/api/other/taskWrapper.hpp"
 
+using namespace lib7842;
+
 /**
  * State machine helper class.
  *

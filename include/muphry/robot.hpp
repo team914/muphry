@@ -12,54 +12,40 @@
 using namespace lib7842;
 using namespace okapi;
 
-//chassis
-extern std::shared_ptr<ThreeEncoderXDriveModel> model;
-extern std::shared_ptr<CustomOdometry> odom;
-
-//controllers
-extern std::shared_ptr<OdomXController> controller;
-extern std::shared_ptr<PathFollower> follower;
-
-//encoders
-extern std::shared_ptr<ADIEncoder> left;
-extern std::shared_ptr<ADIEncoder> right;
-extern std::shared_ptr<ADIEncoder> middle;
-
-//paths
-extern std::map<std::string,PursuitPath> paths;
-
-//intake
-extern std::shared_ptr<MotorGroup> intake;
-
-//tray
-extern std::shared_ptr<MotorGroup> tray;
-extern std::shared_ptr<Potentiometer> trayPotent;
-extern std::shared_ptr<AsyncPosPIDController> trayController;
-extern std::shared_ptr<AsyncPosPIDController> viciousTrayController;
-
-//tray vals
-extern double trayUp;
-extern double trayMiddleUp;
-extern double trayMiddleDown;
-extern double trayDown;
-
-//lift
-extern std::shared_ptr<Motor> lift;
-extern std::shared_ptr<AsyncPosPIDController> liftController;
-
-//lift vals
-extern double liftUp;
-extern double liftMiddle;
-extern double liftDown;
-extern bool liftMiddleDownToggle;
-extern bool liftMiddleUpToggle;
-
 //controller
 extern std::shared_ptr<Controller> master;
+
+//controller buttons
+extern std::shared_ptr<ControllerButton> intakeUp;
+extern std::shared_ptr<ControllerButton> intakeDown;
+extern std::shared_ptr<ControllerButton> tilterUp;
+extern std::shared_ptr<ControllerButton> tilterDown;
+extern std::shared_ptr<ControllerButton> liftUp;
+extern std::shared_ptr<ControllerButton> liftMid;
 
 //screen
 extern std::shared_ptr<GUI::Screen> screen;
 extern GUI::Selector* selector;
+extern GUI::Actions* intakeActions;
+extern GUI::Actions* liftActions;
+extern GUI::Actions* tilterActions;
 
-//overheat warning
-void overheatWarn();
+//intake
+const int leftIntakePort{4};
+const int rightIntakePort{-7};
+const QLength intakeDiameter{3_in};
+const double intakekP{.001};
+const double intakekI{0};
+const double intakekD{0};
+
+//lift
+const int liftPort{15};
+const double liftkP{.2};
+const double liftkI{0};
+const double liftkD{.0};
+const double midTower{680};
+const double lowTower{500};
+const double a2CubeStack{150};
+const double a3CubeStack{350};
+const double a4CubeStack{550};
+const double down{0};

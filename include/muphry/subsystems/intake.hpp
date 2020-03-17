@@ -3,7 +3,8 @@
 #include "okapi/api.hpp"
 #include "lib7842/api/other/taskWrapper.hpp"
 #include "muphry/statemachine.hpp"
-#include <initializer_list>
+#include "muphry/robot.hpp"
+
 #include <math.h>
 
 using namespace okapi;
@@ -20,16 +21,8 @@ enum class IntakeState{
 };
 
 class Intake : public StateMachine<IntakeState, IntakeState::off> {
-    static Intake *intake;
-
-    Intake(
-        int leftPort,
-        int rightPort,
-        QLength idiameter,
-        double ikP,
-        double ikI = 0,
-        double ikD = 0
-    );
+    private:
+    Intake();
 
     double circumference{.0001};
     double distance{0};
@@ -41,10 +34,12 @@ class Intake : public StateMachine<IntakeState, IntakeState::off> {
 
     virtual void initialize();
 
-    void loop();
+    void loop() override;
+
+    static Intake* intake;
 
     public:
     static Intake* getIntake();
 
-
+    void setDistance( QLength idistance );
 };

@@ -1,4 +1,6 @@
 #include "muphry/robot.hpp"
+#include "muphry/subsystems/intake.hpp"
+#include "muphry/subsystems/lift.hpp"
 #include "muphry/autons.hpp"
 
 
@@ -11,107 +13,93 @@ using namespace okapi::literals;
 void initialize() {
 	printf("init\n");
 
-	std::shared_ptr<Motor> topRight = std::make_shared<Motor>(-9);
-	std::shared_ptr<Motor> topLeft = std::make_shared<Motor>(2);
-	std::shared_ptr<Motor> bottomLeft = std::make_shared<Motor>(20);
-	std::shared_ptr<Motor> bottomRight = std::make_shared<Motor>(-1);
-
-	bottomLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomLeft->setGearing(AbstractMotor::gearset::red);
-	bottomRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomRight->setGearing(AbstractMotor::gearset::red);
-	topLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topLeft->setGearing(AbstractMotor::gearset::red);
-	topRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topRight->setGearing(AbstractMotor::gearset::red);
-
-	left = std::make_shared<ADIEncoder>(1,2,false);
-	right = std::make_shared<ADIEncoder>(7,8,false);
-	middle = std::make_shared<ADIEncoder>(3,4,false);
+	Intake::getIntake()->startTask();
+	Lift::getLift()->startTask();
 
 	master = std::make_shared<Controller>();
-	std::string out("line");
-	master->setText(0,0,"init");
-	master->setText(1,1,out);
-	master->setText(2,2,"hi");
-	
-	model = std::make_shared<ThreeEncoderXDriveModel>(
-		topLeft,
-		topRight,
-		bottomRight,
-		bottomLeft,
-		left,
-		right,
-		middle,
-		200,
-		12000
-	);
 
-	odom = std::make_shared<CustomOdometry>(
-		model,
-		ChassisScales({2.8114_in,9.883_in,.01_in,2.8114_in},360),
-		TimeUtilFactory().create()
-	);
-	odom->setState(State(0_in, 0_in, 0_deg));
-
-	controller = std::make_shared<OdomXController>(
-		model,
-		odom,
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0045,.0000,.0001,.00},
-			TimeUtilFactory::withSettledUtilParams(75, 10, 250_ms)),
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.02,.0000,.001,.00},
-			TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)),
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.017,.0000,.0000,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
-		TimeUtilFactory().create()
-	);
-
-	follower = std::make_shared<PathFollower>(
-		model,
-		odom,
-		ChassisScales({4_in,9_in},imev5GreenTPR),
-		4_in,
-		TimeUtilFactory().create()
-	);
+	intakeUp = std::make_shared<ControllerButton>(ControllerDigital::R1);
+	intakeDown = std::make_shared<ControllerButton>(ControllerDigital::R2);
+	tilterUp = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	tilterDown = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	liftUp = std::make_shared<ControllerButton>(ControllerDigital::right);
+	liftMid = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	screen->startTask("screenTask");
 
-	selector = dynamic_cast<GUI::Selector*>(
-    	&screen->makePage<GUI::Selector>("Selector")
-			.button("Default", [&]() {
-				Auton::skills();
+	intakeActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Intake")
+			.button("Nothing", [&](){
+				;
 			})
-			.button("Test", [&]() { 
-				printf("test\n");
-				Auton::test(true);
+			.button("In Full", [&]() {
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+			})
+			.button("Out Full", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::outFull);
+			 })
+			.button("In Half", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::inHalf);
 			 })
 			.newRow()
-			.button("Red Big", [&]() { 
-				;
+			.button("Out Half", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
 			 })
-			.button("Red Small", [&]() { 
-				printf("redSmall");
-				Auton::small();
+			.button("Move Distance", [&](){
+				Intake::getIntake()->setDistance(-5.5_in);
+				Intake::getIntake()->setNewState(IntakeState::moveDistance);
 			 })
-			.newRow()
-			.button("Blue Big", [&](){
-				;
-			 })
-			.button("Blue Small", [&]() { 
-				printf("blueSmall");
-				Auton::small(false);
+			.button("Hold", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::hold);
+			})
+			.button("Off", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::off);
 			})
 			.build()
 		);
 
-	screen->makePage<GUI::Odom>("Odom")
-		.attachOdom(odom)
-		.attachResetter([&](){
-		});
+	liftActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Lift")
+			.button("Nothing", [&](){
+				;
+			})
+			.button("Mid Tower", [&]() {
+				Lift::getLift()->setState(LiftState::midTower);
+			})
+			.button("Low Tower", [&]() { 
+				Lift::getLift()->setState(LiftState::lowTower);
+			 })
+			.newRow()
+			.button("2 Cube ", [&]() { 
+				Lift::getLift()->setState(LiftState::a2CubeStack);
+			 })
+			.button("3 Cube", [&]() { 
+				Lift::getLift()->setState(LiftState::a3CubeStack);
+			 })
+			.button("4 Cube", [&](){
+				Lift::getLift()->setState(LiftState::a4CubeStack);
+			 })
+			.newRow()
+			.button("Hold", [&]() { 
+				Lift::getLift()->setState(LiftState::hold);
+			})
+			.button("Down", [&]() { 
+				Lift::getLift()->setState(LiftState::down);
+			})			
+			.button("Off", [&]() { 
+				Lift::getLift()->setState(LiftState::off);
+			})
+			.build()
+		);
+
+	tilterActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Tilter")
+			.button("Nothing", [&](){
+				;
+			})
+			.build()
+		);
 
 	screen->makePage<GUI::Graph>("Temp")
 		.withRange(0,100)
@@ -144,25 +132,13 @@ void opcontrol() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
+	Intake::getIntake()->setNewState(IntakeState::off);
+
 	while (true) {
 		//cheesy x arcade
-		double forward = 0;
-		double right = 0;
-		double yaw = 0;
-
-		forward = master->getAnalog(ControllerAnalog::rightY);
-		right = master->getAnalog(ControllerAnalog::rightX);
-		yaw = master->getAnalog(ControllerAnalog::leftX);
-
-		if(tray->getEncoder()->get()>2000){
-			forward /= 2;
-			right /= 2;
-			yaw /= 2;
-		}
-
-		model->xArcade(right, forward, yaw, 0.1);
-
-
+		double forward = master->getAnalog(ControllerAnalog::rightY);
+		double right = master->getAnalog(ControllerAnalog::rightX);
+		double yaw = master->getAnalog(ControllerAnalog::leftX);
 
 		pros::delay(20);
 	}
