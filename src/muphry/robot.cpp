@@ -1,5 +1,50 @@
 #include "muphry/robot.hpp"
 
+//chassis
+std::shared_ptr<ThreeEncoderXDriveModel> model;
+std::shared_ptr<CustomOdometry> odom;
+
+//controllers
+std::shared_ptr<OdomXController> controller;
+std::shared_ptr<PathFollower> follower;
+
+//sensors
+std::shared_ptr<ADIEncoder> left;
+std::shared_ptr<ADIEncoder> right;
+std::shared_ptr<ADIEncoder> middle;
+
+//paths
+std::map<std::string,PursuitPath> paths;
+
+//tray
+std::shared_ptr<MotorGroup> tray;
+std::shared_ptr<AsyncPosPIDController> trayController;
+std::shared_ptr<AsyncPosPIDController> viciousTrayController;
+
+//tray vals
+double trayUp = 3000;
+double trayMiddleUp = 1000;
+double trayMiddleDown = 1000;
+double trayDown = 10;
+bool trayMiddleUpToggle = false;
+bool trayMiddleDownToggle = false;
+
+//lift
+std::shared_ptr<Motor> lift;
+std::shared_ptr<AsyncPosPIDController> liftController;
+
+double liftUp = 2300;
+double liftMiddle = 2000;
+double liftDown = -50;
+
+//controller
+std::shared_ptr<Controller> master;
+
+//screen
+std::shared_ptr<GUI::Screen> screen;
+GUI::Selector* selector;
+
+//overheat WARNING
 void overheatWarn(){
 //	while(true){
 		std::string out;
