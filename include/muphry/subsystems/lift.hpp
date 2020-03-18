@@ -16,7 +16,6 @@ enum class LiftState{
     a2CubeStack,
     a3CubeStack,
     a4CubeStack,
-    hold,
     down,
     off
 };

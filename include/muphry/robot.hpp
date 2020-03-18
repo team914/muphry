@@ -18,8 +18,8 @@ extern std::shared_ptr<Controller> master;
 //controller buttons
 extern std::shared_ptr<ControllerButton> intakeUp;
 extern std::shared_ptr<ControllerButton> intakeDown;
-extern std::shared_ptr<ControllerButton> tilterUp;
-extern std::shared_ptr<ControllerButton> tilterDown;
+extern std::shared_ptr<ControllerButton> tilterUpBtn;
+extern std::shared_ptr<ControllerButton> tilterDownBtn;
 extern std::shared_ptr<ControllerButton> liftUp;
 extern std::shared_ptr<ControllerButton> liftMid;
 
@@ -40,7 +40,7 @@ const double intakekD{0};
 
 //lift
 const int liftPort{15};
-const double liftkP{.2};
+const double liftkP{.01};
 const double liftkI{0};
 const double liftkD{.0};
 const double midTower{680};
@@ -48,4 +48,13 @@ const double lowTower{500};
 const double a2CubeStack{150};
 const double a3CubeStack{350};
 const double a4CubeStack{550};
-const double down{0};
+const double liftDown{-20};
+
+//tilter
+const int tilterPort{9};
+const double tilterkP{.01};
+const double tilterkI{0};
+const double tilterkD{.0};
+const double tilterUp{1100};
+const double tilterLiftUp{100};
+const double tilterDown{0};

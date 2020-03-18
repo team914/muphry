@@ -94,23 +94,10 @@ void Lift::loop(){
                     setDone();
                 }          
             break;
-            case LiftState::hold:
-                liftController->flipDisable(false);
-
-                liftController->setTarget( liftMotor->getEncoder()->get() );
-
-                if( !liftController->isSettled() ){
-                    if( time.getTimer()->getDtFromStart().convert(millisecond) > 2000){
-                        setDone();
-                    }
-                }else{
-                    setDone();
-                }
-            break;
             case LiftState::down:
                 liftController->flipDisable(false);
 
-                liftController->setTarget(down);
+                liftController->setTarget(liftDown);
 
                 if( !liftController->isSettled() ){
                     if( time.getTimer()->getDtFromStart().convert(millisecond) > 2000){

@@ -1,8 +1,8 @@
 #include "muphry/robot.hpp"
 #include "muphry/subsystems/intake.hpp"
 #include "muphry/subsystems/lift.hpp"
+#include "muphry/subsystems/tilter.hpp"
 #include "muphry/autons.hpp"
-
 
 using namespace lib7842;
 using namespace lib7842::units;
@@ -15,13 +15,14 @@ void initialize() {
 
 	Intake::getIntake()->startTask();
 	Lift::getLift()->startTask();
+	Tilter::getTilter()->startTask();
 
 	master = std::make_shared<Controller>();
 
 	intakeUp = std::make_shared<ControllerButton>(ControllerDigital::R1);
 	intakeDown = std::make_shared<ControllerButton>(ControllerDigital::R2);
-	tilterUp = std::make_shared<ControllerButton>(ControllerDigital::L1);
-	tilterDown = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	tilterUpBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	tilterDownBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
 	liftUp = std::make_shared<ControllerButton>(ControllerDigital::right);
 	liftMid = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
@@ -30,9 +31,6 @@ void initialize() {
 
 	intakeActions = dynamic_cast<GUI::Actions*>(
     	&screen->makePage<GUI::Actions>("Intake")
-			.button("Nothing", [&](){
-				;
-			})
 			.button("In Full", [&]() {
 				Intake::getIntake()->setNewState(IntakeState::inFull);
 			})
@@ -42,10 +40,10 @@ void initialize() {
 			.button("In Half", [&]() { 
 				Intake::getIntake()->setNewState(IntakeState::inHalf);
 			 })
-			.newRow()
 			.button("Out Half", [&]() { 
 				Intake::getIntake()->setNewState(IntakeState::outHalf);
 			 })
+			.newRow()
 			.button("Move Distance", [&](){
 				Intake::getIntake()->setDistance(-5.5_in);
 				Intake::getIntake()->setNewState(IntakeState::moveDistance);
@@ -61,29 +59,23 @@ void initialize() {
 
 	liftActions = dynamic_cast<GUI::Actions*>(
     	&screen->makePage<GUI::Actions>("Lift")
-			.button("Nothing", [&](){
-				;
-			})
+
 			.button("Mid Tower", [&]() {
 				Lift::getLift()->setState(LiftState::midTower);
 			})
 			.button("Low Tower", [&]() { 
 				Lift::getLift()->setState(LiftState::lowTower);
 			 })
-			.newRow()
 			.button("2 Cube ", [&]() { 
 				Lift::getLift()->setState(LiftState::a2CubeStack);
 			 })
 			.button("3 Cube", [&]() { 
 				Lift::getLift()->setState(LiftState::a3CubeStack);
 			 })
+			.newRow()
 			.button("4 Cube", [&](){
 				Lift::getLift()->setState(LiftState::a4CubeStack);
 			 })
-			.newRow()
-			.button("Hold", [&]() { 
-				Lift::getLift()->setState(LiftState::hold);
-			})
 			.button("Down", [&]() { 
 				Lift::getLift()->setState(LiftState::down);
 			})			
@@ -95,8 +87,18 @@ void initialize() {
 
 	tilterActions = dynamic_cast<GUI::Actions*>(
     	&screen->makePage<GUI::Actions>("Tilter")
-			.button("Nothing", [&](){
-				;
+			.button("Up", [&](){
+				Tilter::getTilter()->setState(TilterState::up);
+			})
+			.button("LiftUp", [&](){
+				Tilter::getTilter()->setState(TilterState::liftUp);
+			})
+			.newRow()
+			.button("Down", [&](){
+				Tilter::getTilter()->setState(TilterState::down);
+			})
+			.button("Off", [&](){
+				Tilter::getTilter()->setState(TilterState::off);
 			})
 			.build()
 		);
@@ -139,6 +141,16 @@ void opcontrol() {
 		double forward = master->getAnalog(ControllerAnalog::rightY);
 		double right = master->getAnalog(ControllerAnalog::rightX);
 		double yaw = master->getAnalog(ControllerAnalog::leftX);
+
+		if(intakeUp->changedToPressed() && intakeDown->changedToPressed()){
+			Intake::getIntake()->setNewState(IntakeState::hold);
+		}else if(intakeUp->changedToPressed()){
+			Intake::getIntake()->setNewState(IntakeState::inFull);
+		}else if(intakeDown->changedToPressed()){
+			Intake::getIntake()->setNewState(IntakeState::outHalf);			
+		}else{
+			Intake::getIntake()->setNewState(IntakeState::hold);
+		}
 
 		pros::delay(20);
 	}
