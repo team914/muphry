@@ -2,13 +2,13 @@
 #include "muphry/subsystems/intake.hpp"
 #include "muphry/subsystems/lift.hpp"
 #include "muphry/subsystems/tilter.hpp"
+#include "muphry/subsystems/chassis/skidSteerPIDChassis.hpp"
 #include "muphry/autons.hpp"
 
 using namespace lib7842;
 using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
-
 
 void initialize() {
 	printf("init\n");
@@ -17,9 +17,13 @@ void initialize() {
 	Tilter::getTilter()->startTask();
 	Lift::getLift()->startTask();
 
+	SkidSteerPIDChassis::getSkidSteerPIDChassis()->startTask();
+
 	Intake::getIntake()->setNewState(IntakeState::hold);
 	Tilter::getTilter()->setNewState(TilterState::down);
 	Lift::getLift()->setNewState(LiftState::down);
+
+	SkidSteerPIDChassis::getSkidSteerPIDChassis()->setNewState(ChassisState::pidSkidSteer);
 
 	master = std::make_shared<Controller>();
 

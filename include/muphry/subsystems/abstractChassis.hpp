@@ -11,14 +11,14 @@ using namespace okapi;
 using namespace lib7842;
 
 enum class ChassisState{
-    auton,
+    pidSkidSteer,
     driver,
     off
 };
 
 class AbstractChassis : public StateMachine<ChassisState, ChassisState::off> {
-    private:
-    AbstractChassis();
+    protected:
+    AbstractChassis() = default;
 
     virtual void initialize();
 
@@ -26,7 +26,13 @@ class AbstractChassis : public StateMachine<ChassisState, ChassisState::off> {
 
     static AbstractChassis* chassis;
 
+    double forward{0};
+    double right{0};
+    double yaw{0};
+
     public:
     static AbstractChassis* getChassis();
+
+    void chassisDriver( double iforward, double iright, double iyaw );
 
 };

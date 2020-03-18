@@ -1,21 +1,13 @@
 #include "muphry/subsystems/abstractChassis.hpp"
 
-AbstractChassis::AbstractChassis(){
-    chassis = nullptr;
-}
-
 void AbstractChassis::initialize(){}
 
 void AbstractChassis::loop(){
     while(true){
         printf("Chassis State = ");
         switch(state){
-            case ChassisState::auton:
-                printf("auton\n");
-                setDone();
-            break;
             case ChassisState::driver:
-                printf("driver\n");
+                printf("driver: forward %d, right %d, yaw %d\n", forward, right, yaw);
                 setDone();
             break;
             case ChassisState::off:
@@ -23,6 +15,7 @@ void AbstractChassis::loop(){
                 setDone();
             break;
         }
+        pros::delay(20);
     }
 }
 
@@ -31,4 +24,10 @@ AbstractChassis* AbstractChassis::getChassis(){
         chassis = new AbstractChassis();
     }
     return chassis;
+}
+
+void AbstractChassis::chassisDriver( double iforward, double iright, double iyaw ){
+    forward = iforward;
+    right = iright;
+    yaw = iyaw;
 }
