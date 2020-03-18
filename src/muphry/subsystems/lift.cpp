@@ -25,10 +25,14 @@ void Lift::initialize(){}
 void Lift::loop(){
     while(true){
 
+        //printf("Lift State = ");
+
         auto time = TimeUtilFactory().create();
 
         switch(state){
             case LiftState::midTower:
+                //printf("midTower\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(midTower);
@@ -42,6 +46,8 @@ void Lift::loop(){
                 }
             break;
             case LiftState::lowTower:
+                //printf("lowTower\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(lowTower);
@@ -55,6 +61,8 @@ void Lift::loop(){
                 }
             break;
             case LiftState::a2CubeStack:
+                //printf("a2CubeStack\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(a2CubeStack);
@@ -68,6 +76,8 @@ void Lift::loop(){
                 }
             break;
             case LiftState::a3CubeStack:
+                //printf("a3CubeStack\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(a3CubeStack);
@@ -82,6 +92,8 @@ void Lift::loop(){
 
             break;
             case LiftState::a4CubeStack:
+                //printf("a4CubeStack\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(a4CubeStack);
@@ -95,6 +107,8 @@ void Lift::loop(){
                 }          
             break;
             case LiftState::down:
+                //printf("down\n");
+
                 liftController->flipDisable(false);
 
                 liftController->setTarget(liftDown);
@@ -109,7 +123,7 @@ void Lift::loop(){
 
             break;
             case LiftState::off:
-                liftMotor->tarePosition();
+                //printf("off\n");
                 
                 liftController->reset();
                 liftController->flipDisable(true);

@@ -39,11 +39,14 @@ void Intake::initialize(){}
 
 void Intake::loop(){
     while(true){
+        //printf("Intake State = ");
 
         double target = (leftIntake->getEncoder()->get() + rightIntake->getEncoder()->get()) / 2;
 
         switch(state){
             case IntakeState::inFull:
+                //printf("inFull\n");
+
                 leftIntake->setVoltageLimit(12000);
                 rightIntake->setVoltageLimit(12000);
 
@@ -56,6 +59,8 @@ void Intake::loop(){
                 setDone();
             break;
             case IntakeState::outFull:
+                //printf("outFull\n");
+
                 leftIntake->setVoltageLimit(12000);
                 rightIntake->setVoltageLimit(12000);
 
@@ -68,6 +73,8 @@ void Intake::loop(){
                 setDone();
             break;
             case IntakeState::inHalf:
+                //printf("inHalf\n");
+
                 leftIntake->setVoltageLimit(6000);
                 rightIntake->setVoltageLimit(6000);
 
@@ -80,6 +87,8 @@ void Intake::loop(){
                 setDone();
             break;
             case IntakeState::outHalf:
+                //printf("outHalf\n");
+
                 leftIntake->setVoltageLimit(6000);
                 rightIntake->setVoltageLimit(6000);
 
@@ -92,6 +101,8 @@ void Intake::loop(){
                 setDone();
             break;
             case IntakeState::hold:
+                //printf("hold\n");
+
                 leftIntake->setVoltageLimit(12000);
                 rightIntake->setVoltageLimit(12000);
 
@@ -104,6 +115,8 @@ void Intake::loop(){
                 setDone();            
             break;
             case IntakeState::off:
+                //printf("off\n");
+
                 leftIntake->tarePosition();
                 rightIntake->tarePosition();
 
@@ -113,6 +126,8 @@ void Intake::loop(){
                 setDone();
             break;
             case IntakeState::moveDistance:
+                //printf("moveDistance\n");
+
                 leftIntake->setVoltageLimit(12000);
                 rightIntake->setVoltageLimit(12000);
 

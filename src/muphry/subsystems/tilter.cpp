@@ -24,11 +24,14 @@ void Tilter::initialize(){}
 
 void Tilter::loop(){
     while(true){
+        //printf("Tilter State = ");
 
         auto time = TimeUtilFactory().create();
 
         switch(state){
             case TilterState::up:
+                //printf("up\n");
+
                 tilterController->flipDisable(false);
 
                 tilterController->setTarget(tilterUp);
@@ -42,6 +45,8 @@ void Tilter::loop(){
                 }
             break;
             case TilterState::liftUp:
+                //printf("liftUp\n");
+
                 tilterController->flipDisable(false);
 
                 tilterController->setTarget(tilterLiftUp);
@@ -55,6 +60,8 @@ void Tilter::loop(){
                 }
             break;
             case TilterState::down:
+                //printf("down\n");
+
                 tilterController->flipDisable(false);
 
                 tilterController->setTarget(tilterDown);
@@ -69,7 +76,7 @@ void Tilter::loop(){
 
             break;
             case TilterState::off:
-                tilterMotor->tarePosition();
+                //printf("off\n");
                 
                 tilterController->reset();
                 tilterController->flipDisable(true);

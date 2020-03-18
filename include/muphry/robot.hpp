@@ -16,12 +16,12 @@ using namespace okapi;
 extern std::shared_ptr<Controller> master;
 
 //controller buttons
-extern std::shared_ptr<ControllerButton> intakeUp;
-extern std::shared_ptr<ControllerButton> intakeDown;
+extern std::shared_ptr<ControllerButton> intakeUpBtn;
+extern std::shared_ptr<ControllerButton> intakeDownBtn;
 extern std::shared_ptr<ControllerButton> tilterUpBtn;
 extern std::shared_ptr<ControllerButton> tilterDownBtn;
-extern std::shared_ptr<ControllerButton> liftUp;
-extern std::shared_ptr<ControllerButton> liftMid;
+extern std::shared_ptr<ControllerButton> liftUpBtn;
+extern std::shared_ptr<ControllerButton> liftMidBtn;
 
 //screen
 extern std::shared_ptr<GUI::Screen> screen;
@@ -49,6 +49,7 @@ const double a2CubeStack{150};
 const double a3CubeStack{350};
 const double a4CubeStack{550};
 const double liftDown{-20};
+extern bool liftToggle;//true means the lift is up false means the lift is down
 
 //tilter
 const int tilterPort{9};

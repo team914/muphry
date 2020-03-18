@@ -14,17 +14,21 @@ void initialize() {
 	printf("init\n");
 
 	Intake::getIntake()->startTask();
-	Lift::getLift()->startTask();
 	Tilter::getTilter()->startTask();
+	Lift::getLift()->startTask();
+
+	Intake::getIntake()->setNewState(IntakeState::hold);
+	Tilter::getTilter()->setNewState(TilterState::down);
+	Lift::getLift()->setNewState(LiftState::down);
 
 	master = std::make_shared<Controller>();
 
-	intakeUp = std::make_shared<ControllerButton>(ControllerDigital::R1);
-	intakeDown = std::make_shared<ControllerButton>(ControllerDigital::R2);
+	intakeUpBtn = std::make_shared<ControllerButton>(ControllerDigital::R1);
+	intakeDownBtn = std::make_shared<ControllerButton>(ControllerDigital::R2);
 	tilterUpBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
 	tilterDownBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
-	liftUp = std::make_shared<ControllerButton>(ControllerDigital::right);
-	liftMid = std::make_shared<ControllerButton>(ControllerDigital::Y);
+	liftUpBtn = std::make_shared<ControllerButton>(ControllerDigital::right);
+	liftMidBtn = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 	screen->startTask("screenTask");
@@ -90,7 +94,7 @@ void initialize() {
 			.button("Up", [&](){
 				Tilter::getTilter()->setState(TilterState::up);
 			})
-			.button("LiftUp", [&](){
+			.button("liftUpBtn", [&](){
 				Tilter::getTilter()->setState(TilterState::liftUp);
 			})
 			.newRow()
@@ -107,6 +111,8 @@ void initialize() {
 		.withRange(0,100)
 		.withGrid(2,4)
 		;
+
+	pros::delay(100);
 
 	printf("init end\n");
 }
@@ -134,7 +140,7 @@ void opcontrol() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
-	Intake::getIntake()->setNewState(IntakeState::off);
+
 
 	while (true) {
 		//cheesy x arcade
@@ -142,14 +148,66 @@ void opcontrol() {
 		double right = master->getAnalog(ControllerAnalog::rightX);
 		double yaw = master->getAnalog(ControllerAnalog::leftX);
 
-		if(intakeUp->changedToPressed() && intakeDown->changedToPressed()){
-			Intake::getIntake()->setNewState(IntakeState::hold);
-		}else if(intakeUp->changedToPressed()){
+		if(intakeUpBtn->isPressed() && intakeDownBtn->isPressed()){
+			printf("Intake Up and Intake Down Button Pressed\n");
+			Intake::getIntake()->setNewState(IntakeState::off);
+		}else if(intakeUpBtn->isPressed()){
+			printf("Intake Up Button Pressed\n");
 			Intake::getIntake()->setNewState(IntakeState::inFull);
-		}else if(intakeDown->changedToPressed()){
+		}else if(intakeDownBtn->isPressed()){
+			printf("Intake Down Button Pressed\n");
 			Intake::getIntake()->setNewState(IntakeState::outHalf);			
-		}else{
+		}else if (intakeUpBtn->changedToReleased() || intakeDownBtn->changedToReleased()){
+			printf("Intake Up or Intake Down Button Released\n");
 			Intake::getIntake()->setNewState(IntakeState::hold);
+		}
+
+		if(tilterUpBtn->isPressed() && tilterDownBtn->isPressed()){
+			printf("Tilter Up and Tilter Down Button Pressed\n");
+			Tilter::getTilter()->setNewState(TilterState::off);
+		}else if(tilterUpBtn->isPressed()){
+			printf("Tilter Up Button Pressed\n");
+			if( Lift::getLift()->getState() != LiftState::down ){
+				Lift::getLift()->setNewState(LiftState::down);
+			}
+			Tilter::getTilter()->setNewState(TilterState::up);
+		}else if(tilterDownBtn->isPressed()){
+			printf("Tilter Down Button Pressed\n");
+			Tilter::getTilter()->setNewState(TilterState::down);
+		}
+
+		if(liftUpBtn->changedToPressed() || liftMidBtn->changedToPressed()){
+			printf("lift Up Button or Lift Mid Button Pressed\n");
+			liftToggle = !liftToggle;
+		}
+		
+		if(liftUpBtn->isPressed() && liftMidBtn->isPressed()){
+			printf("Lift Up and Lift Mid Button Pressed\n");
+			Lift::getLift()->setNewState(LiftState::off);
+		}else if(liftUpBtn->isPressed() && liftToggle ){
+			printf("Lift Up Button Pressed and liftToggle\n");
+			if( Tilter::getTilter()->getState() == TilterState::up ){
+				Tilter::getTilter()->setStateBlocking(TilterState::liftUp);
+			}else{
+				Tilter::getTilter()->setNewState(TilterState::liftUp);
+			}
+			Lift::getLift()->setNewState(LiftState::midTower);
+		}else if(liftMidBtn->isPressed() && liftToggle ){
+			printf("Lift Mid Button Pressed and liftToggle\n");
+			if( Tilter::getTilter()->getState() == TilterState::up ){
+				Tilter::getTilter()->setStateBlocking(TilterState::liftUp);
+			}else{
+				Tilter::getTilter()->setNewState(TilterState::liftUp);
+			}
+			Lift::getLift()->setNewState(LiftState::lowTower);
+		}else if( liftUpBtn->isPressed() && !liftToggle ){
+			printf("Lift Up Button Pressed and not liftToggle\n");
+			Lift::getLift()->setNewState(LiftState::down);
+			Tilter::getTilter()->setNewState(TilterState::down);
+		}else if( liftMidBtn->isPressed() && !liftToggle ){
+			printf("Lift Mid Button Pressed and not liftToggle\n");
+			Lift::getLift()->setNewState(LiftState::down);
+			Tilter::getTilter()->setNewState(TilterState::down);
 		}
 
 		pros::delay(20);
