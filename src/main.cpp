@@ -26,7 +26,7 @@ void initialize() {
 	intakeUpBtn = std::make_shared<ControllerButton>(ControllerDigital::R1);
 	intakeDownBtn = std::make_shared<ControllerButton>(ControllerDigital::R2);
 	tilterUpBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
-	tilterDownBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	tilterDownBtn = std::make_shared<ControllerButton>(ControllerDigital::L2);
 	liftUpBtn = std::make_shared<ControllerButton>(ControllerDigital::right);
 	liftMidBtn = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
@@ -140,8 +140,6 @@ void opcontrol() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
-
-
 	while (true) {
 		//cheesy x arcade
 		double forward = master->getAnalog(ControllerAnalog::rightY);
@@ -168,7 +166,7 @@ void opcontrol() {
 		}else if(tilterUpBtn->isPressed()){
 			printf("Tilter Up Button Pressed\n");
 			if( Lift::getLift()->getState() != LiftState::down ){
-				Lift::getLift()->setNewState(LiftState::down);
+				Lift::getLift()->setStateBlocking(LiftState::down);
 			}
 			Tilter::getTilter()->setNewState(TilterState::up);
 		}else if(tilterDownBtn->isPressed()){
@@ -180,7 +178,7 @@ void opcontrol() {
 			printf("lift Up Button or Lift Mid Button Pressed\n");
 			liftToggle = !liftToggle;
 		}
-		
+
 		if(liftUpBtn->isPressed() && liftMidBtn->isPressed()){
 			printf("Lift Up and Lift Mid Button Pressed\n");
 			Lift::getLift()->setNewState(LiftState::off);
