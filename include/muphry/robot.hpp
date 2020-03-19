@@ -11,6 +11,7 @@
 
 using namespace lib7842;
 using namespace okapi;
+using namespace okapi::literals;
 
 //controller
 extern std::shared_ptr<Controller> master;
@@ -73,10 +74,13 @@ const int rightADIEncoderPort2{2};
 const int leftADIEncoderPort1{7};
 const int leftADIEncoderPort2{8};
 const AbstractMotor::gearset chassisGearset{AbstractMotor::gearset::green};
+const double ratio{1};
+const AbstractMotor::GearsetRatioPair chassisGearsetRatioPair{AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green, ratio}};
 const AbstractMotor::brakeMode chassisBrakeMode{AbstractMotor::brakeMode::coast};
 const ChassisScales adiScales{{2.8114_in,9.883_in,.01_in,2.8114_in}, 360};
 const ChassisScales chassisScales{{4_in,9_in}, imev5GreenTPR};
 const QLength lookahead{4_in};
+const QLength driveRadius{4_in};
 const double chassisDistancekP{.0045};
 const double chassisDistancekI{.0000};
 const double chassisDistancekD{.0001};
@@ -89,3 +93,6 @@ const double chassisAnglekP{.017};
 const double chassisAnglekI{.0000};
 const double chassisAnglekD{.0000};
 const TimeUtil chassisAngleTimeUtil{TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)};
+const QSpeed speedLimits{.2_mps};
+const QAcceleration accelerationLimits{1.1_mps2};
+const QJerk jerkLimits{40_mps2 / 1_s};
