@@ -1,10 +1,10 @@
 #pragma once
 #include "okapi/api/odometry/odometry.hpp"
 #include "page.hpp"
-#include <functional>
-#include <string>
 
 namespace lib7842::GUI {
+
+using namespace okapi;
 
 class Odom : public Page {
 public:
@@ -63,6 +63,11 @@ private:
   std::vector<lv_point_t> linePoints {lv_point_t {0, 0}, lv_point_t {0, 0}}; // line positions
   int lineLength = 0;
   lv_style_t lineStyle;
+
+  // robot path
+  lv_obj_t* path {nullptr};
+  std::vector<lv_point_t> pathPoints {lv_point_t {0, 0}, lv_point_t {0, 0}}; // line positions
+  lv_style_t pathStyle;
 
   // status label
   lv_obj_t* statusLabel {nullptr};
