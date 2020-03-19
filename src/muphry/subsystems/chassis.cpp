@@ -5,9 +5,62 @@ void Chassis::initialize(){}
 void Chassis::loop(){
     while(true){
         printf("Chassis State = ");
+        _isDone = false;
         switch(state){
+            case ChassisState::PID:
+                if(!pidController){
+                    pidController = makePidController();
+                }
+                setDone();
+            break;
+            case ChassisState::integrated:
+                if(!integratedController){
+                    integratedController = makeIntegratedController();
+                }
+                setDone();
+            break;              
+            case ChassisState::linearProfile:
+                if(!leftProfileController){
+                    leftProfileController = makeLeftProfileController();
+                }
+                if(!rightProfileController){
+                    rightProfileController = makeRightProfileController();
+                }                
+                setDone();
+            break;
+            case ChassisState::profile:
+                if(!profileController){
+                    profileController = makeProfileController();
+                }
+                setDone();
+            break;              
+            case ChassisState::odomPID:
+                if(!modelType){
+                    if(!odomController){
+                        odomController = makeOdomController();
+                    }
+                }else{
+                    if(!odomXController){
+                        odomXController = makeOdomXController();
+                    }
+                }
+                setDone();
+            break;              
+            case ChassisState::purePursuit:
+                if(!modelType){
+                    if(!pathFollowerController){
+                        pathFollowerController = makePathFollowerController();
+                    }
+                }else{
+                    if(!pathFollowerXController){
+                        pathFollowerXController = makePathFollowerXController();
+                    }
+                }
+                setDone();
+            break;                      
             case ChassisState::driver:
                 printf("driver: forward %d, right %d, yaw %d\n", forward, right, yaw);
+
                 setDone();
             break;
             case ChassisState::off:
