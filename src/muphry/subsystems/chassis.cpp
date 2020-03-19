@@ -8,6 +8,11 @@ void Chassis::loop(){
         switch(state){
             case ChassisState::driver:
                 printf("driver: forward %d, right %d, yaw %d\n", forward, right, yaw);
+                if(!modelType && skidSteerModel){
+                    skidSteerModel->driveVectorVoltage(forward, yaw);
+                }else if (modelType && holonomicModel){
+                    holonomicModel->xArcade(right,forward,yaw);
+                }
                 setDone();
             break;
             case ChassisState::off:
@@ -18,8 +23,6 @@ void Chassis::loop(){
         pros::delay(20);
     }
 }
-
-void Chassis::initialize(){}
 
 void Chassis::resetModels(){
     skidSteerModel = nullptr;
@@ -214,7 +217,7 @@ std::shared_ptr<AsyncLinearMotionProfileController> Chassis::makeLeftProfileCont
 
     auto controller = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits.convert(mps2 / second) },
+        PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits },
         std::make_shared<MotorGroup>(left),
         chassisScales.wheelDiameter,
         chassisGearsetRatioPair
@@ -232,7 +235,7 @@ std::shared_ptr<AsyncLinearMotionProfileController> Chassis::makeRightProfileCon
 
     auto controller = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits.convert(mps2 / second) },
+        PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits },
         std::make_shared<MotorGroup>(right),
         chassisScales.wheelDiameter,
         chassisGearsetRatioPair
@@ -251,7 +254,7 @@ std::shared_ptr<AsyncMotionProfileController> Chassis::makeProfileController(){
         skidSteerModel = makeSkidSteerModel();
         auto controller = std::make_shared<AsyncMotionProfileController>(
             TimeUtilFactory().create(),
-            PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits.convert(mps2 / second) },
+            PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits },
             skidSteerModel,
             chassisScales,
             chassisGearsetRatioPair
@@ -264,7 +267,7 @@ std::shared_ptr<AsyncMotionProfileController> Chassis::makeProfileController(){
         holonomicModel = makeHolonomicModel();
         auto controller = std::make_shared<AsyncMotionProfileController>(
             TimeUtilFactory().create(),
-            PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits.convert(mps2 / second) },
+            PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits },
             holonomicModel,
             chassisScales,
             chassisGearsetRatioPair
@@ -273,7 +276,6 @@ std::shared_ptr<AsyncMotionProfileController> Chassis::makeProfileController(){
 
         return controller;
     }
-
 }
 
 std::shared_ptr<CustomOdometry> Chassis::makeOdom(){
@@ -297,10 +299,8 @@ std::shared_ptr<CustomOdometry> Chassis::makeOdom(){
             adiScales
         );
 
-
         return controller;
     }
-
 }
 
 std::shared_ptr<OdomController> Chassis::makeOdomController(){
@@ -428,8 +428,7 @@ std::shared_ptr<PathFollowerX> Chassis::makePathFollowerXController(){
             holonomicModel,
             odom,
             chassisScales,
-            lookahead,
-            driveRadius
+            lookahead
         );
 
         return controller;
