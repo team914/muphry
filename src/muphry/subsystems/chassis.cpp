@@ -19,8 +19,6 @@ void Chassis::loop(){
     }
 }
 
-void Chassis::initialize(){}
-
 void Chassis::resetModels(){
     skidSteerModel = nullptr;
     holonomicModel = nullptr;
@@ -428,8 +426,7 @@ std::shared_ptr<PathFollowerX> Chassis::makePathFollowerXController(){
             holonomicModel,
             odom,
             chassisScales,
-            lookahead,
-            driveRadius
+            lookahead
         );
 
         return controller;
