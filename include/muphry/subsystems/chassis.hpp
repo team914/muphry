@@ -83,87 +83,54 @@ class Chassis : public StateMachine<ChassisState, ChassisState::off> {
     void setModelType( bool isHolonomic = false );
     void chassisDriver( double iforward, double iright, double iyaw );
 
-    template<typename Model>
-    Model getModel(){
-        if(!modelType){
-            return skidSteerModel;
-        }else{
-            return holonomicModel;
+    template<typename Controller> ChassisControllerPID getController(){
+        if(pidController){
+            return pidController;
         }
     }
 
-    template<typename Controller>
-    Controller getController(){
-        if(isDone()){
-            switch(state){
-                case ChassisState::PID:
-                    if(pidController){
-                        return pidController;
-                    }
-                    setDone();
-                break;
-                case ChassisState::integrated:
-                    if(integratedController){
-                        return integratedController;
-                    }
-                    setDone();
-                break;
-                case ChassisState::linearProfile:
-                    if(leftProfileController && rightProfileController){
-                        return std::tuple<Controller,Controller>(leftProfileController,leftProfileController);
-                    }
-                    setDone();
-                break;
-                case ChassisState::profile:
-                    if(profileController){
-                        return profileController;
-                    }
-                    setDone();
-                break;              
-                case ChassisState::odomPID:
-                    if(!modelType){
-                        if(odomController){
-                            return odomController;
-                        }
-                    }else{
-                        if(odomXController){
-                            return odomXController;
-                        }
-                    }
-                    setDone();
-                break;              
-                case ChassisState::purePursuit:
-                    if(!modelType){
-                        if(pathFollowerController){
-                            return pathFollowerController;
-                        }
-                    }else{
-                        if(pathFollowerXController){
-                            return pathFollowerXController;
-                        }
-                    }
-                    setDone();
-                break;                      
-                case ChassisState::driver:
-                    printf("driver: forward %d, right %d, yaw %d\n", forward, right, yaw);
-                    if(!modelType){
-                        if(skidSteerModel){
-                            skidSteerModel->driveVectorVoltage(forward,yaw);
-                        }
-                    }else{
-                        if(holonomicModel){
-                            holonomicModel->xArcade(right,forward,yaw);
-                        }
-                    }
-                    setDone();
-                break;
-                case ChassisState::off:
-                    printf("off\n");
-                    setDone();
-                break;
-            }
+    template<typename Controller> ChassisControllerIntegrated getController(){
+        if(integratedController){
+            return integratedController;
+        }
+    }
 
+    template<typename Controller> std::pair<AsyncLinearMotionProfileController,
+        AsyncLinearMotionProfileController> getController(){
+
+        if(leftProfileController && rightProfileController){
+            return std::make_pair<AsyncLinearMotionProfileController,AsyncLinearMotionProfileController>
+                (leftProfileController, rightProfileController);
+        }
+    }
+
+    template<typename Controller> AsyncMotionProfileController getController(){
+        if(profileController){
+            return profileController;
+        }
+    }
+
+    template<typename Controller> OdomController getController(){
+        if(odomController){
+            return odomController;
+        }
+    }
+
+    template<typename Controller> OdomXController getController(){
+        if(odomXController){
+            return odomXController;
         }
     }    
 
+    template<typename Controller> PathFollower getController(){
+        if(pathFollowerController){
+            return pathFollowerController;
+        }
+    }
+
+    template<typename Controller> PathFollowerX getController(){
+        if(pathFollowerXController){
+            return pathFollowerXController;
+        }
+    }
 };

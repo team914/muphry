@@ -57,10 +57,20 @@ void Chassis::loop(){
                     }
                 }
                 setDone();
-            break;                      
+            break;                   
             case ChassisState::driver:
                 printf("driver: forward %d, right %d, yaw %d\n", forward, right, yaw);
-
+                if(!modelType){
+                    if(!skidSteerModel){
+                        skidSteerModel = makeSkidSteerModel();
+                    }
+                    skidSteerModel->driveVectorVoltage(forward, yaw);
+                }else{
+                    if(!holonomicModel){
+                        holonomicModel = makeHolonomicModel();
+                    }
+                    holonomicModel->xArcade(right,forward,yaw);
+                }
                 setDone();
             break;
             case ChassisState::off:
@@ -71,6 +81,8 @@ void Chassis::loop(){
         pros::delay(20);
     }
 }
+
+Chassis* Chassis::chassis = nullptr;
 
 void Chassis::resetModels(){
     skidSteerModel = nullptr;

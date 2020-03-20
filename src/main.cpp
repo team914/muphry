@@ -10,6 +10,8 @@ using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
 
+
+
 void initialize() {
 	printf("init\n");
 
@@ -20,6 +22,9 @@ void initialize() {
 	Intake::getIntake()->setNewState(IntakeState::hold);
 	Tilter::getTilter()->setNewState(TilterState::down);
 	Lift::getLift()->setNewState(LiftState::down);
+
+	Chassis::getChassis()->startTask();
+	
 
 	master = std::make_shared<Controller>();
 
@@ -124,6 +129,8 @@ void competition_initialize() {}
 void autonomous() {
 	auto time = pros::millis();
 
+	Chassis::getChassis()->getController();
+
 	selector->run();
 	
 	master->setText(0,0,std::to_string(pros::millis()-time));
@@ -140,11 +147,15 @@ void opcontrol() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
+	Chassis::getChassis()->setState(ChassisState::driver);
+
 	while (true) {
 		//cheesy x arcade
 		double forward = master->getAnalog(ControllerAnalog::rightY);
 		double right = master->getAnalog(ControllerAnalog::rightX);
 		double yaw = master->getAnalog(ControllerAnalog::leftX);
+
+		Chassis::getChassis()->chassisDriver(forward,right,yaw);
 
 		if(intakeUpBtn->isPressed() && intakeDownBtn->isPressed()){
 			printf("Intake Up and Intake Down Button Pressed\n");
@@ -155,8 +166,7 @@ void opcontrol() {
 		}else if(intakeDownBtn->isPressed()){
 			printf("Intake Down Button Pressed\n");
 			Intake::getIntake()->setNewState(IntakeState::outHalf);			
-		}else if (intakeUpBtn->changedToReleased() || intakeDownBtn->changedToReleased()){
-			printf("Intake Up or Intake Down Button Released\n");
+		}else{
 			Intake::getIntake()->setNewState(IntakeState::hold);
 		}
 
