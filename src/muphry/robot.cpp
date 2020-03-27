@@ -20,3 +20,6 @@ GUI::Actions* tilterActions;
 
 //lift
 bool liftToggle = true;
+
+//chassis
+std::shared_ptr<Chassis> chassis = std::make_shared<Chassis>();
