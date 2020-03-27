@@ -5,12 +5,25 @@
 #include "muphry/subsystems/chassis.hpp"
 #include "muphry/autons.hpp"
 
+#include "pros/misc.hpp"
+
 using namespace lib7842;
 using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
 
 void initialize() {
+
+	pros::delay(100);
+
+	Logger::setDefaultLogger(
+	    std::make_shared<Logger>(
+	        TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
+	        "/ser/sout", // Output to the PROS terminal
+	        Logger::LogLevel::info // Show errors and warnings
+	    )
+	);
+
 	printf("init\n");
 
 	Intake::getIntake()->startTask();
@@ -31,7 +44,87 @@ void initialize() {
 	liftMidBtn = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
-	screen->startTask("screenTask");
+
+	selector = dynamic_cast<GUI::Selector*>(
+    	&screen->makePage<GUI::Selector>("Skid Steer Selector")
+			.button("Test Profile", [&]() {
+				printf("running test profile\n");
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->skidSteerModel->setMaxVoltage(12000);
+
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+
+				chassis->leftProfileController->setTarget( 360 );
+				chassis->rightProfileController->setTarget( 360 );
+
+//				while( !chassis->leftProfileController->isSettled() && !chassis->rightProfileController->isSettled() ){
+				while(true){
+					double left = chassis->leftProfileController->step( chassis->skidSteerModel->getSensorVals()[0] );
+					double right = chassis->rightProfileController->step( chassis->skidSteerModel->getSensorVals()[1] );
+
+					printf("left is %d with sensors %d\nright is %d with sensors %d\n", left, chassis->skidSteerModel->getSensorVals()[0], right, chassis->skidSteerModel->getSensorVals()[1]);
+					printf("target %d\noutput %d\nprocessValue %d\n", 
+						chassis->leftProfileController->getTarget(),
+						chassis->leftProfileController->getOutput(),
+						chassis->leftProfileController->getProcessValue());
+					printf("sampleTime %d\nvel %d\n accel%d\n",
+						chassis->leftProfileController->getSampleTime().convert(millisecond),
+						chassis->leftProfileController->getVel().convert(rpm),
+						chassis->leftProfileController->getAccel().convert(rpm / second));
+
+					chassis->skidSteerModel->left( left );
+					chassis->skidSteerModel->right( right );
+
+					pros::delay(5000);
+				}
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})
+			.button("Test PID", [&]() {
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->moveDistance(38_in);
+
+				chassis->skidSteerModel->setMaxVoltage(11000);
+				chassis->pidController->moveDistance(-14_in);
+
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->turnAngle(135_deg);
+
+				Intake::getIntake()->setNewState(IntakeState::hold);
+			})
+			.button("Test Straight PID", [&]() {
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->skidSteerModel->setMaxVoltage(9000);
+
+				chassis->pidController->moveDistance(24_in);
+				chassis->pidController->moveDistance(-24_in);
+
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})			
+			.button("Test Turn PID", [&]() {
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->skidSteerModel->setMaxVoltage(10000);
+
+				chassis->pidController->turnAngle(90_deg);
+				chassis->pidController->turnAngle(-90_deg);
+
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})			
+
+			.build()
+		);
 
 	intakeActions = dynamic_cast<GUI::Actions*>(
     	&screen->makePage<GUI::Actions>("Intake")
@@ -106,11 +199,12 @@ void initialize() {
 			})
 			.build()
 		);
-
-	screen->makePage<GUI::Graph>("Temp")
-		.withRange(0,100)
-		.withGrid(2,4)
-		;
+//*
+	screen->makePage<GUI::Odom>("Odom")
+		.attachOdom(chassis->odom)
+		.attachResetter([&](){
+			chassis->skidSteerModel->resetSensors();
+		});//*/
 
 	pros::delay(100);
 
@@ -122,29 +216,39 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
+	printf("autonomous\n");
+
 	auto time = pros::millis();
 
-	selector->run();
+	printf("battery voltage = %d\n", pros::battery::get_voltage());
+
+	chassis->skidSteerModel->resetSensors();
+	chassis->stopControllers();
+
+	if(pros::battery::get_voltage() >= 12000){
+		selector->run();
+	}
 	
-	master->setText(0,0,std::to_string(pros::millis()-time));
+	printf("end autonomous\n");
 }
 
 void opcontrol() {
 
 	printf("opcontrol\n");
 
-	bool intakeToggle = false;
-
 	std::string out("line");
 	master->setText(0,0,"opcontrol");
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
+	chassis->stopControllers();
+	chassis->skidSteerModel->setMaxVoltage(12000);
+
 	while (true) {
-		//cheesy x arcade
-		double forward = master->getAnalog(ControllerAnalog::rightY);
-		double right = master->getAnalog(ControllerAnalog::rightX);
-		double yaw = master->getAnalog(ControllerAnalog::leftX);
+
+		chassis->skidSteerModel->arcade(
+			master->getAnalog(ControllerAnalog::rightY), 
+			master->getAnalog(ControllerAnalog::leftX));
 
 		if(intakeUpBtn->isPressed() && intakeDownBtn->isPressed()){
 			printf("Intake Up and Intake Down Button Pressed\n");
@@ -155,8 +259,7 @@ void opcontrol() {
 		}else if(intakeDownBtn->isPressed()){
 			printf("Intake Down Button Pressed\n");
 			Intake::getIntake()->setNewState(IntakeState::outHalf);			
-		}else if (intakeUpBtn->changedToReleased() || intakeDownBtn->changedToReleased()){
-			printf("Intake Up or Intake Down Button Released\n");
+		}else{
 			Intake::getIntake()->setNewState(IntakeState::hold);
 		}
 

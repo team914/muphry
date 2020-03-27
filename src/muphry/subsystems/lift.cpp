@@ -16,8 +16,7 @@ Lift::Lift(){
         liftkI,
         liftkD
     );
-    liftController->startThread();    
-
+    liftController->startThread();
 }
 
 void Lift::initialize(){}
