@@ -5,12 +5,121 @@
 #include "muphry/subsystems/chassis.hpp"
 #include "muphry/autons.hpp"
 
-#include "pros/misc.hpp"
+#include "api.h"
 
 using namespace lib7842;
 using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
+
+//this is going to make it so that I can stop logging the kinematics
+bool logKinematics = false;
+bool resetKinematics = false;
+
+//this will get run as a task seperate from the main task
+void task_fnc(void* param){
+	pros::delay(100);
+
+    //print helpful things
+    printf("Angular Kinematics of Left Motor with time difference of 10ms\n");
+
+	std::cout << "Iteration,\tPos,\tSpeed,\tAccel,\tJerk,\tSnap,\tdT\n";
+
+    //all of these variables are need to calculate jerk and snap
+	double pos = 0;
+	double lastPos = 0;
+	double speed = 0;
+	double lastSpeed = 0;
+	double accel = 0;
+    double lastAccel = 0;
+    double jerk = 0;
+    double lastJerk = 0;
+    double snap = 0;
+	double lastSnap = 0;
+
+	std::shared_ptr<Timer> time = std::make_shared<Timer>();
+	time->placeMark();
+	double dt = 0;
+
+	int loop = 1;
+
+	const double loopDt = 5;
+
+	ADIEncoder encoder(1,2);
+	AverageFilter<30> posFilter;
+	AverageFilter<30> speedFilter;
+	AverageFilter<30> accelFilter;
+	AverageFilter<30> jerkFilter;
+	AverageFilter<30> snapFilter;
+
+    //this will keep the task running
+    while(true){
+		dt = time->getDtFromMark().convert(second);
+
+		pos = posFilter.filter(encoder.get()) / 360 * 0.07140956 * PI;
+
+		if(lastPos != 0)
+			speed = speedFilter.filter((pos - lastPos) / dt);
+
+		if(lastSpeed != 0)
+			accel = accelFilter.filter((speed - lastSpeed) / dt);
+
+		if(lastAccel != 0)
+	        jerk = jerkFilter.filter((accel - lastAccel) / dt);
+
+		if(lastJerk != 0)
+			snap = snapFilter.filter((jerk - lastJerk) / dt);
+
+		if(logKinematics){
+			if(resetKinematics){
+				std::cout << "INFO: Kinematics: Cannot reset Kinematics while logKinematics is enabled\n";
+				resetKinematics = false;
+			}
+
+			//this will print all the data to the terminal
+			std::string msg = std::to_string(loop) + ", " + 
+				std::to_string(pos) + "\t,\t" + 
+				std::to_string(speed) + "\t,\t" + std::to_string(accel) +
+				"\t,\t" + std::to_string(jerk) + "\t,\t" + 
+				std::to_string(snap) + "\t,\t" + std::to_string(time->getDtFromStart().convert(second)) +"\n";
+			if(pos!=0){
+				loop++;
+
+				std::cout << msg;
+			}
+		}else if(resetKinematics){
+			std::cout << "INFO: Kinematics: Resetting Kinematics\n";
+
+			//reset all the kinematis variables
+			pos = 0;
+			lastPos = 0;
+			speed = 0;
+			lastSpeed = 0;
+			accel = 0;
+			lastAccel = 0;
+			jerk = 0;
+			lastJerk = 0;
+			snap = 0;
+			lastSnap = 0;
+
+			resetKinematics = false;
+		}
+
+        //update last each loop
+		lastPos = pos;
+		lastSpeed = speed;
+		lastAccel = accel;
+        lastJerk = jerk;
+		lastSnap = snap;
+
+		time->placeMark();
+
+        //delay (same value as change in time)
+        pros::delay(loopDt);
+    }
+}
+//this will initalize the task called "Kinematics Log" and it will run task_fnc
+pros::task_t task = pros::c::task_create( task_fnc, NULL, TASK_PRIORITY_DEFAULT, TASK_STACK_DEPTH_DEFAULT, "Kinematics Log");
 
 void initialize() {
 
@@ -20,7 +129,7 @@ void initialize() {
 	    std::make_shared<Logger>(
 	        TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
 	        "/ser/sout", // Output to the PROS terminal
-	        Logger::LogLevel::info // Show errors and warnings
+	        Logger::LogLevel::warn // Show errors and warnings
 	    )
 	);
 
@@ -57,29 +166,21 @@ void initialize() {
 				chassis->leftProfileController->flipDisable(false);
 				chassis->rightProfileController->flipDisable(false);
 
-				chassis->leftProfileController->setTarget( 360 );
-				chassis->rightProfileController->setTarget( 360 );
+				chassis->leftProfileController->generatePath ( {0_in,48_in}, "straight" );
+				chassis->rightProfileController->generatePath( {0_in,48_in}, "straight" );
 
-//				while( !chassis->leftProfileController->isSettled() && !chassis->rightProfileController->isSettled() ){
-				while(true){
-					double left = chassis->leftProfileController->step( chassis->skidSteerModel->getSensorVals()[0] );
-					double right = chassis->rightProfileController->step( chassis->skidSteerModel->getSensorVals()[1] );
+				chassis->leftProfileController->setTarget("straight");
+				chassis->rightProfileController->setTarget("straight");
 
-					printf("left is %d with sensors %d\nright is %d with sensors %d\n", left, chassis->skidSteerModel->getSensorVals()[0], right, chassis->skidSteerModel->getSensorVals()[1]);
-					printf("target %d\noutput %d\nprocessValue %d\n", 
-						chassis->leftProfileController->getTarget(),
-						chassis->leftProfileController->getOutput(),
-						chassis->leftProfileController->getProcessValue());
-					printf("sampleTime %d\nvel %d\n accel%d\n",
-						chassis->leftProfileController->getSampleTime().convert(millisecond),
-						chassis->leftProfileController->getVel().convert(rpm),
-						chassis->leftProfileController->getAccel().convert(rpm / second));
+				chassis->leftProfileController->waitUntilSettled();
+				chassis->rightProfileController->waitUntilSettled();
 
-					chassis->skidSteerModel->left( left );
-					chassis->skidSteerModel->right( right );
+				chassis->leftProfileController->setTarget("straight", true);
+				chassis->rightProfileController->setTarget("straight", true);
 
-					pros::delay(5000);
-				}
+				chassis->leftProfileController->waitUntilSettled();
+				chassis->rightProfileController->waitUntilSettled();
+
 				Intake::getIntake()->setNewState(IntakeState::hold);
 
 			})
@@ -225,9 +326,17 @@ void autonomous() {
 	chassis->skidSteerModel->resetSensors();
 	chassis->stopControllers();
 
+	resetKinematics = true;
+	while(resetKinematics){
+		pros::delay(10);
+	}
+	logKinematics = true;
+
 	if(pros::battery::get_voltage() >= 12000){
 		selector->run();
 	}
+
+	logKinematics = false;
 	
 	printf("end autonomous\n");
 }
@@ -244,7 +353,14 @@ void opcontrol() {
 	chassis->stopControllers();
 	chassis->skidSteerModel->setMaxVoltage(12000);
 
+	Timer timer;
+	logKinematics = true;
+
 	while (true) {
+
+		if( 7 > timer.getDtFromStart().convert(second) > 6){
+			logKinematics = false;
+		}
 
 		chassis->skidSteerModel->arcade(
 			master->getAnalog(ControllerAnalog::rightY), 

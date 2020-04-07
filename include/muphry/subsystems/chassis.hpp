@@ -26,8 +26,8 @@ class Chassis{
     std::shared_ptr<ChassisControllerPID> pidController{nullptr};
 
     //profile controllers
-    std::shared_ptr<IterativeVelMotionProfileController> leftProfileController{nullptr};
-    std::shared_ptr<IterativeVelMotionProfileController> rightProfileController{nullptr};
+    std::shared_ptr<AsyncLinearMotionProfileController> leftProfileController{nullptr};
+    std::shared_ptr<AsyncLinearMotionProfileController> rightProfileController{nullptr};
     std::shared_ptr<AsyncMotionProfileController> profileController{nullptr};
 
     //odom controllers
@@ -66,7 +66,7 @@ class Chassis{
     const double chassisAnglekI{.0008};
     const double chassisAnglekD{.0000};
     const TimeUtil chassisAngleTimeUtil{TimeUtilFactory::withSettledUtilParams(40, 5, 100_ms)};
-    const QSpeed speedLimits{1_mps};
-    const QAcceleration accelerationLimits{1.1_mps2};
-    const QJerk jerkLimits{40_mps2 / 1_s};
+    const double speedLimits{1};
+    const double accelerationLimits{1.4};
+    const double jerkLimits{12.8};
 };

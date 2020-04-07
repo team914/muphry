@@ -49,25 +49,27 @@ Chassis::Chassis(){
     );
     pidController->setVelocityMode(false);
 
-    leftProfileController = std::make_shared<IterativeVelMotionProfileController>(
+    leftProfileController = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        AngularLimits{ 200_rpm, 5 * rpm / second },
-        VelMathFactory::createPtr( chassisScales.tpr, 10_ms ),
+        PathfinderLimits{ speedLimits, accelerationLimits, jerkLimits },
+        std::make_shared<MotorGroup>(left),
         wheelDiameter,
         chassisGearsetRatioPair
     );
+    leftProfileController->startThread();
 
-    rightProfileController = std::make_shared<IterativeVelMotionProfileController>(
+    rightProfileController = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        AngularLimits{ 200_rpm, 5 * rpm / second },
-        VelMathFactory::createPtr( chassisScales.tpr, 10_ms ),
+        PathfinderLimits{ speedLimits, accelerationLimits, jerkLimits },
+        std::make_shared<MotorGroup>(right),
         wheelDiameter,
         chassisGearsetRatioPair
     );
+    rightProfileController->startThread();
 
     profileController = std::make_shared<AsyncMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{speedLimits.convert(mps),accelerationLimits.convert(mps2),jerkLimits.convert(mps2 / second) },
+        PathfinderLimits{speedLimits,accelerationLimits,jerkLimits },
         skidSteerModel,
         chassisScales,
         chassisGearsetRatioPair
