@@ -1,5 +1,9 @@
 #include "muphry/subsystems/chassis.hpp"
 
+template <typename T> double sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 Chassis::Chassis(){
     MotorGroup left({topLeftPort,bottomLeftPort});
     MotorGroup right({topRightPort,bottomRightPort});
@@ -110,8 +114,53 @@ Chassis::Chassis(){
         driveRadius
     );
 
-    stopControllers();
+    log = std::make_shared<AsyncKinematicsLog>(
+        std::make_shared<ADIEncoder>(leftADIEncoderPort1, leftADIEncoderPort2),
+        adiScales.middleWheelDiameter,
+        360,
+        1,
+        10_ms
+    );
+    log->startThread();
+    log->flipDisable(true);
 
+    stopControllers();
+}
+
+void Chassis::linearProfileStraight(QLength idistance, QLength icurrentPos){
+    leftProfileController->generatePath ( {icurrentPos.abs(),idistance.abs()}, "straight" );
+    rightProfileController->generatePath( {icurrentPos.abs(),idistance.abs()}, "straight" );
+    bool backward = false;
+    if(sgn(idistance.convert(meter))==-1){
+        backward = true;
+    }
+    leftProfileController->setTarget( "straight", backward);
+    rightProfileController->setTarget("straight", backward);
+    linearProfileWaitTilSettled();
+    leftProfileController ->removePath("straight");
+    rightProfileController->removePath("straight");
+}
+
+void Chassis::linearProfileTurn(QAngle iangle, QLength icurrentPos){
+    QLength turnLength = iangle.convert(radian) * (chassisScales.wheelDiameter / 2);
+    leftProfileController->generatePath ( {icurrentPos.abs(),turnLength.abs()}, "turn" );
+    rightProfileController->generatePath( {icurrentPos.abs(),turnLength.abs()}, "turn" );
+    bool left = false;
+    if(sgn(iangle.convert(radian))==-1){
+        left = true;
+    }
+    leftProfileController->setTarget( "turn", !left);
+    rightProfileController->setTarget("turn",  left);
+    linearProfileWaitTilSettled();
+    leftProfileController ->removePath("turn");
+    rightProfileController->removePath("turn");
+}
+
+bool Chassis::linearProfileWaitTilSettled(){
+    while(!leftProfileController->isSettled() && !rightProfileController->isSettled()){
+        pros::delay(10);
+    }
+    return true;
 }
 
 void Chassis::stopControllers(){

@@ -4,6 +4,7 @@
 #include "lib7842/api.hpp"
 #include "muphry/statemachine.hpp"
 #include "muphry/iterativeVelMotionProfileController.hpp"
+#include "asyncKinematicsLog/asyncKinematicsLog.hpp"
 
 #include <math.h>
 
@@ -26,6 +27,9 @@ class Chassis{
     std::shared_ptr<ChassisControllerPID> pidController{nullptr};
 
     //profile controllers
+    void linearProfileStraight(QLength idistance, QLength icurrentPos = 0_in);
+    void linearProfileTurn(QAngle iangle, QLength icurrentPos = 0_in);
+    bool linearProfileWaitTilSettled();
     std::shared_ptr<AsyncLinearMotionProfileController> leftProfileController{nullptr};
     std::shared_ptr<AsyncLinearMotionProfileController> rightProfileController{nullptr};
     std::shared_ptr<AsyncMotionProfileController> profileController{nullptr};
@@ -33,6 +37,9 @@ class Chassis{
     //odom controllers
     std::shared_ptr<OdomController> odomController{nullptr};
     std::shared_ptr<PathFollower> pursuitController{nullptr};
+
+    //log
+    std::shared_ptr<AsyncKinematicsLog> log{nullptr};
 
     void stopControllers();
 
