@@ -58,7 +58,7 @@ class Chassis{
     const AbstractMotor::brakeMode chassisBrakeMode{AbstractMotor::brakeMode::coast};
     const ChassisScales adiScales{{2.8114_in,9.883_in,.01_in,2.8114_in}, 360};
     const QLength wheelDiameter{4_in};
-    const ChassisScales chassisScales{{4_in,9_in}, imev5GreenTPR};
+    const ChassisScales chassisScales{{4.036_in,5_in}, imev5GreenTPR};
     const QLength lookahead{4_in};
     const QLength driveRadius{4_in};
     const double chassisDistancekP{.0015};

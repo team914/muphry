@@ -142,15 +142,15 @@ void Chassis::linearProfileStraight(QLength idistance, QLength icurrentPos){
 }
 
 void Chassis::linearProfileTurn(QAngle iangle, QLength icurrentPos){
-    QLength turnLength = iangle.convert(radian) * (chassisScales.wheelDiameter / 2);
+    QLength turnLength = iangle.convert(radian) * (chassisScales.wheelDiameter * PI);
     leftProfileController->generatePath ( {icurrentPos.abs(),turnLength.abs()}, "turn" );
     rightProfileController->generatePath( {icurrentPos.abs(),turnLength.abs()}, "turn" );
     bool left = false;
     if(sgn(iangle.convert(radian))==-1){
         left = true;
     }
-    leftProfileController->setTarget( "turn", !left);
-    rightProfileController->setTarget("turn",  left);
+    leftProfileController->setTarget( "turn", left);
+    rightProfileController->setTarget("turn", !left);
     linearProfileWaitTilSettled();
     leftProfileController ->removePath("turn");
     rightProfileController->removePath("turn");

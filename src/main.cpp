@@ -46,6 +46,22 @@ void initialize() {
 
 	selector = dynamic_cast<GUI::Selector*>(
     	&screen->makePage<GUI::Selector>("Skid Steer Selector")
+			.button("Turn Profile", [&]() {
+				printf("running test profile\n");
+
+				std::cout << chassis->log->getColumnHeaders();
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+
+				chassis->linearProfileTurn(-90_deg);
+				chassis->linearProfileTurn(90_deg);
+
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})
 			.button("Fwd Profile", [&]() {
 				printf("running test profile\n");
 
@@ -61,22 +77,7 @@ void initialize() {
 
 				Intake::getIntake()->setNewState(IntakeState::hold);
 			})
-			.button("Turn Profile", [&]() {
-				printf("running test profile\n");
-
-				std::cout << chassis->log->getColumnHeaders();
-
-				Intake::getIntake()->setNewState(IntakeState::inFull);
-
-				chassis->leftProfileController->flipDisable(false);
-				chassis->rightProfileController->flipDisable(false);
-
-				chassis->linearProfileTurn(90_deg);
-				chassis->linearProfileTurn(-90_deg);
-
-				Intake::getIntake()->setNewState(IntakeState::hold);
-
-			})
+			.newRow()
 			.button("Test PID", [&]() {
 
 				Intake::getIntake()->setNewState(IntakeState::inFull);
