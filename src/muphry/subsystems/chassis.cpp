@@ -7,12 +7,11 @@ template <typename T> double sgn(T val) {
 Chassis::Chassis(){
     MotorGroup left({topLeftPort,bottomLeftPort});
     MotorGroup right({topRightPort,bottomRightPort});
-    skidSteerModel = std::make_shared<ThreeEncoderSkidSteerModel>(
+    skidSteerModel = std::make_shared<SkidSteerModel>(
         std::make_shared<MotorGroup>(left),
         std::make_shared<MotorGroup>(right),
         std::make_shared<ADIEncoder>(leftADIEncoderPort1,leftADIEncoderPort2),
         std::make_shared<ADIEncoder>(rightADIEncoderPort1,rightADIEncoderPort2),
-        std::make_shared<ADIEncoder>(4,5),
         200,
         12000
     );
@@ -55,25 +54,25 @@ Chassis::Chassis(){
 
     leftProfileController = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{ speedLimits, accelerationLimits, jerkLimits },
+        turnLimits,
         std::make_shared<MotorGroup>(left),
-        wheelDiameter,
+        chassisScales.wheelDiameter,
         chassisGearsetRatioPair
     );
     leftProfileController->startThread();
 
     rightProfileController = std::make_shared<AsyncLinearMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{ speedLimits, accelerationLimits, jerkLimits },
+        turnLimits,
         std::make_shared<MotorGroup>(right),
-        wheelDiameter,
+        chassisScales.wheelDiameter,
         chassisGearsetRatioPair
     );
     rightProfileController->startThread();
 
     profileController = std::make_shared<AsyncMotionProfileController>(
         TimeUtilFactory().create(),
-        PathfinderLimits{speedLimits,accelerationLimits,jerkLimits },
+        turnLimits,
         skidSteerModel,
         chassisScales,
         chassisGearsetRatioPair
@@ -128,30 +127,31 @@ Chassis::Chassis(){
 }
 
 void Chassis::linearProfileStraight(QLength idistance, QLength icurrentPos){
-    leftProfileController->generatePath ( {icurrentPos.abs(),idistance.abs()}, "straight" );
-    rightProfileController->generatePath( {icurrentPos.abs(),idistance.abs()}, "straight" );
+    leftProfileController->generatePath ( {icurrentPos.abs(),idistance.abs()}, "straight", straightLimits );
+    rightProfileController->generatePath( {icurrentPos.abs(),idistance.abs()}, "straight", straightLimits );
     bool backward = false;
     if(sgn(idistance.convert(meter))==-1){
         backward = true;
     }
     leftProfileController->setTarget( "straight", backward);
     rightProfileController->setTarget("straight", backward);
-    linearProfileWaitTilSettled();
+    while(!linearProfileWaitTilSettled());
     leftProfileController ->removePath("straight");
     rightProfileController->removePath("straight");
 }
 
 void Chassis::linearProfileTurn(QAngle iangle, QLength icurrentPos){
-    QLength turnLength = iangle.convert(radian) * (chassisScales.wheelDiameter * PI);
-    leftProfileController->generatePath ( {icurrentPos.abs(),turnLength.abs()}, "turn" );
-    rightProfileController->generatePath( {icurrentPos.abs(),turnLength.abs()}, "turn" );
+    QLength turnLength = iangle.convert(radian) * (chassisScales.wheelTrack/2);
+    leftProfileController->generatePath ( {icurrentPos.abs(),turnLength.abs()}, "turn", turnLimits );
+    rightProfileController->generatePath( {icurrentPos.abs(),turnLength.abs()}, "turn", turnLimits );
     bool left = false;
     if(sgn(iangle.convert(radian))==-1){
         left = true;
     }
     leftProfileController->setTarget( "turn", left);
     rightProfileController->setTarget("turn", !left);
-    linearProfileWaitTilSettled();
+    pros::delay(10);
+    while(!linearProfileWaitTilSettled());
     leftProfileController ->removePath("turn");
     rightProfileController->removePath("turn");
 }

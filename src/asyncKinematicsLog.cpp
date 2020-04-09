@@ -128,6 +128,11 @@ void AsyncKinematicsLog::loop(){
     std::cout << getRawValues();
     std::cout << getColumnHeaders();
  
+    std::ofstream f;
+    f.open("/usd/test.txt", std::ios::app);
+    f <<getValue1() << ","<<getValue2()<<std::endl;
+    f.close();
+
     while(true){
         //get delta time
         dt = loopDtTimer->getDtFromMark().convert(second);

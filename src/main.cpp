@@ -44,43 +44,45 @@ void initialize() {
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
 
-	selector = dynamic_cast<GUI::Selector*>(
+	selector = dynamic_cast<GUI::Selector*>(		
     	&screen->makePage<GUI::Selector>("Skid Steer Selector")
-			.button("Turn Profile", [&]() {
-				printf("running test profile\n");
+			.button("Straight PID", [&]() {
 
-				std::cout << chassis->log->getColumnHeaders();
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->skidSteerModel->setMaxVoltage(12000);
 
-				chassis->leftProfileController->flipDisable(false);
-				chassis->rightProfileController->flipDisable(false);
+				chassis->pidController->startThread();
 
-				chassis->linearProfileTurn(-90_deg);
-				chassis->linearProfileTurn(90_deg);
+				chassis->pidController->moveDistance(48_in);
+				chassis->pidController->moveDistance(-48_in);
 
-				Intake::getIntake()->setNewState(IntakeState::hold);
+				chassis->pidController->stop();
 
-			})
-			.button("Fwd Profile", [&]() {
-				printf("running test profile\n");
+//				Intake::getIntake()->setNewState(IntakeState::hold);
 
-				std::cout << chassis->log->getColumnHeaders();
+			})			
+			.button("Turn PID", [&]() {
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-				chassis->leftProfileController->flipDisable(false);
-				chassis->rightProfileController->flipDisable(false);
+				chassis->skidSteerModel->setMaxVoltage(10000);
 
-				chassis->linearProfileStraight(36_in);		
-				chassis->linearProfileStraight(-36_in);	
+				chassis->pidController->startThread();
 
-				Intake::getIntake()->setNewState(IntakeState::hold);
-			})
-			.newRow()
+				chassis->pidController->turnAngle( 270_deg);
+				chassis->pidController->turnAngle(-270_deg);
+
+				chassis->pidController->stop();
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})		
 			.button("Test PID", [&]() {
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->pidController->startThread();
 
 				chassis->skidSteerModel->setMaxVoltage(12000);
 				chassis->pidController->moveDistance(38_in);
@@ -91,33 +93,42 @@ void initialize() {
 				chassis->skidSteerModel->setMaxVoltage(12000);
 				chassis->pidController->turnAngle(135_deg);
 
-				Intake::getIntake()->setNewState(IntakeState::hold);
+				chassis->pidController->stop();
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
 			})
-			.button("Test Straight PID", [&]() {
+			.newRow()
+			.button("Turn Profile", [&]() {
+				printf("running test profile\n");
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+				std::cout << chassis->log->getColumnHeaders();
 
-				chassis->skidSteerModel->setMaxVoltage(9000);
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-				chassis->pidController->moveDistance(24_in);
-				chassis->pidController->moveDistance(-24_in);
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
 
-				Intake::getIntake()->setNewState(IntakeState::hold);
+				chassis->linearProfileTurn( 270_deg);
+				chassis->linearProfileTurn(-270_deg);
 
-			})			
-			.button("Test Turn PID", [&]() {
+//				Intake::getIntake()->setNewState(IntakeState::hold);
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+			})
+			.button("Fwd Profile", [&]() {
+				printf("running test profile\n");
 
-				chassis->skidSteerModel->setMaxVoltage(10000);
+				std::cout << chassis->log->getColumnHeaders();
 
-				chassis->pidController->turnAngle(90_deg);
-				chassis->pidController->turnAngle(-90_deg);
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-				Intake::getIntake()->setNewState(IntakeState::hold);
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
 
-			})			
+				chassis->linearProfileStraight(48_in);		
+				chassis->linearProfileStraight(-48_in);	
 
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+			})	
 			.build()
 		);
 
@@ -151,7 +162,6 @@ void initialize() {
 
 	liftActions = dynamic_cast<GUI::Actions*>(
     	&screen->makePage<GUI::Actions>("Lift")
-
 			.button("Mid Tower", [&]() {
 				Lift::getLift()->setState(LiftState::midTower);
 			})
@@ -309,4 +319,3 @@ void opcontrol() {
 		pros::delay(20);
 	}
 }
-

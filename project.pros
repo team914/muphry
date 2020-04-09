@@ -4,24 +4,8 @@
         "project_name": "muphry",
         "target": "v5",
         "templates": {
-            "asyncKinematicsLog": {
-                "location": "/home/acetousk/.config/pros/templates/asyncKinematicsLog@1.0.0",
-                "metadata": {
-                    "origin": "local"
-                },
-                "name": "asyncKinematicsLog",
-                "py/object": "pros.conductor.templates.local_template.LocalTemplate",
-                "supported_kernels": "^3.2.1",
-                "system_files": [
-                    "firmware/asyncKinematicsLog.a",
-                    "include/asyncKinematicsLog/asyncKinematicsLog.hpp"
-                ],
-                "target": "v5",
-                "user_files": [],
-                "version": "1.0.0"
-            },
             "kernel": {
-                "location": "/home/potatehoes/.config/pros/templates/kernel@3.2.1",
+                "location": "/home/acetousk/.config/pros/templates/kernel@3.2.1",
                 "metadata": {
                     "cold_addr": "58720256",
                     "cold_output": "bin/cold.package.bin",
@@ -166,59 +150,8 @@
                 ],
                 "version": "3.2.1"
             },
-            "lib7842": {
-                "location": "/home/potatehoes/.config/pros/templates/lib7842@1.12.0",
-                "metadata": {
-                    "origin": "local"
-                },
-                "name": "lib7842",
-                "py/object": "pros.conductor.templates.local_template.LocalTemplate",
-                "supported_kernels": "^3.2.1",
-                "system_files": [
-                    "include/lib7842/api/positioning/point/state.hpp",
-                    "include/lib7842/api/positioning/path/discretePath.hpp",
-                    "include/lib7842/api/purePursuit/pathFollower.hpp",
-                    "include/lib7842/api/vision/query.hpp",
-                    "include/lib7842/api/positioning/path/quinticSegment.hpp",
-                    "include/lib7842/api/odometry/settler.hpp",
-                    "include/lib7842/api/positioning/point/vector.hpp",
-                    "include/lib7842/api/purePursuit/pathGenerator.hpp",
-                    "include/lib7842/api.hpp",
-                    "include/lib7842/api/purePursuit/pursuitPath.hpp",
-                    "include/lib7842/api/positioning/path/quinticPath.hpp",
-                    "include/lib7842/api/other/utility.hpp",
-                    "include/lib7842/api/odometry/customOdometry.hpp",
-                    "include/lib7842/api/purePursuit/pathFollowerX.hpp",
-                    "include/lib7842/api/gui/graph.hpp",
-                    "include/lib7842/api/other/global.hpp",
-                    "include/lib7842/api/odometry/odomXController.hpp",
-                    "include/lib7842/api/positioning/path/compoundPath.hpp",
-                    "include/lib7842/api/other/taskWrapper.hpp",
-                    "include/lib7842/api/odometry/odomController.hpp",
-                    "include/lib7842/api/gui/path.hpp",
-                    "include/lib7842/api/positioning/path/abstractPath.hpp",
-                    "include/lib7842/api/positioning/point/data.hpp",
-                    "include/lib7842/api/gui/screen.hpp",
-                    "include/lib7842/api/gui/actions.hpp",
-                    "include/lib7842/api/gui/selector.hpp",
-                    "include/lib7842/api/other/units.hpp",
-                    "include/lib7842/api/positioning/point/mathPoint.hpp",
-                    "include/lib7842/api/gui/odom.hpp",
-                    "firmware/lib7842.a",
-                    "include/lib7842/api/purePursuit/pursuitLimits.hpp",
-                    "include/lib7842/api/vision/container.hpp",
-                    "include/lib7842/api/odometry/trigger.hpp",
-                    "include/lib7842/api/gui/page.hpp",
-                    "include/lib7842/impl/vision/vision.hpp",
-                    "include/lib7842/api/vision/object.hpp",
-                    "include/lib7842/api/gui/visionDrawer.hpp"
-                ],
-                "target": "v5",
-                "user_files": [],
-                "version": "1.12.0"
-            },
             "okapilib": {
-                "location": "/home/potatehoes/.config/pros/templates/okapilib@4.0.3",
+                "location": "/home/acetousk/.config/pros/templates/okapilib@4.0.3",
                 "metadata": {
                     "origin": "pros-mainline"
                 },

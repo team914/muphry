@@ -21,7 +21,7 @@ class Chassis{
     std::shared_ptr<CustomOdometry> odom{nullptr};
 
     //chassis models
-    std::shared_ptr<ThreeEncoderSkidSteerModel> skidSteerModel{nullptr};
+    std::shared_ptr<SkidSteerModel> skidSteerModel{nullptr};
 
     //pid controllers
     std::shared_ptr<ChassisControllerPID> pidController{nullptr};
@@ -57,23 +57,25 @@ class Chassis{
     const AbstractMotor::GearsetRatioPair chassisGearsetRatioPair{AbstractMotor::GearsetRatioPair{AbstractMotor::gearset::green, ratio}};
     const AbstractMotor::brakeMode chassisBrakeMode{AbstractMotor::brakeMode::coast};
     const ChassisScales adiScales{{2.8114_in,9.883_in,.01_in,2.8114_in}, 360};
-    const QLength wheelDiameter{4_in};
-    const ChassisScales chassisScales{{4.036_in,5_in}, imev5GreenTPR};
+    const ChassisScales chassisScales{{4.036_in,9.183748_in}, imev5GreenTPR};
     const QLength lookahead{4_in};
     const QLength driveRadius{4_in};
-    const double chassisDistancekP{.0015};
-    const double chassisDistancekI{.0009};
-    const double chassisDistancekD{.00003};
-    const TimeUtil chassisDistanceTimeUtil{TimeUtilFactory::withSettledUtilParams(40, 10, 100_ms)};
-    const double chassisTurnkP{.0026};
-    const double chassisTurnkI{.000};
+    const double chassisDistancekP{.0028};
+    const double chassisDistancekI{.0005};
+    const double chassisDistancekD{.00016};
+    const TimeUtil chassisDistanceTimeUtil{TimeUtilFactory::withSettledUtilParams(15, 10, 100_ms)};
+    const double chassisTurnkP{.0016};
+    const double chassisTurnkI{.00025};
     const double chassisTurnkD{.00005};
-    const TimeUtil chassisTurnTimeUtil{TimeUtilFactory::withSettledUtilParams(40, 5, 100_ms)};
+    const TimeUtil chassisTurnTimeUtil{TimeUtilFactory::withSettledUtilParams(10, 5, 100_ms)};
     const double chassisAnglekP{.0002};
     const double chassisAnglekI{.0008};
     const double chassisAnglekD{.0000};
-    const TimeUtil chassisAngleTimeUtil{TimeUtilFactory::withSettledUtilParams(40, 5, 100_ms)};
-    const double speedLimits{1};
-    const double accelerationLimits{1.4};
-    const double jerkLimits{12.8};
+    const TimeUtil chassisAngleTimeUtil{TimeUtilFactory::withSettledUtilParams(1000, 5, 100_ms)};
+    const PathfinderLimits straightLimits{1,1.4,12.8};
+    const double turnScale{.25};
+    const PathfinderLimits turnLimits{  straightLimits.maxVel*turnScale, 
+                                        straightLimits.maxAccel*turnScale,
+                                        straightLimits.maxJerk*turnScale};
 };
+//1 | 308 | 647 | 989 | 1315 | 1650
