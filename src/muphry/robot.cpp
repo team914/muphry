@@ -25,6 +25,6 @@ bool liftToggle = true;
 std::shared_ptr<Chassis> chassis = std::make_shared<Chassis>();
 
 //ROS
-std::shared_ptr<ros::NodeHandle>  nh = std::make_shared<ros::NodeHandle>();
-std_msgs::Float64 ros_msg;
-ros::Publisher chatter = ros::Publisher("chatter\0", &ros_msg);
+//std::shared_ptr<ros::NodeHandle>  nh = std::make_shared<ros::NodeHandle>();
+//std_msgs::Float64 ros_msg;
+//ros::Publisher chatter = ros::Publisher("chatter\0", &ros_msg);

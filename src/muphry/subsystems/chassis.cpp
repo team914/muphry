@@ -113,15 +113,6 @@ Chassis::Chassis(){
         driveRadius
     );
 
-    log = std::make_shared<AsyncKinematicsLog>(
-        std::make_shared<ADIEncoder>(leftADIEncoderPort1, leftADIEncoderPort2),
-        adiScales.middleWheelDiameter,
-        360,
-        1,
-        10_ms
-    );
-    log->startThread();
-    log->flipDisable(true);
 
     stopControllers();
 }

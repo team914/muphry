@@ -3,8 +3,7 @@
 #include "okapi/api.hpp"
 #include "lib7842/api.hpp"
 #include "muphry/statemachine.hpp"
-#include "muphry/iterativeVelMotionProfileController.hpp"
-#include "asyncKinematicsLog/asyncKinematicsLog.hpp"
+//#include "asyncKinematicsLog/asyncKinematicsLog.hpp"
 
 #include <math.h>
 
@@ -39,7 +38,7 @@ class Chassis{
     std::shared_ptr<PathFollower> pursuitController{nullptr};
 
     //log
-    std::shared_ptr<AsyncKinematicsLog> log{nullptr};
+//    std::shared_ptr<AsyncKinematicsLog> log{nullptr};
 
     void stopControllers();
 
