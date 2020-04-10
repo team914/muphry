@@ -1,277 +1,206 @@
 #include "muphry/robot.hpp"
+#include "muphry/subsystems/intake.hpp"
+#include "muphry/subsystems/lift.hpp"
+#include "muphry/subsystems/tilter.hpp"
+#include "muphry/subsystems/chassis.hpp"
 #include "muphry/autons.hpp"
+
+#include "api.h"
 
 using namespace lib7842;
 using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
 
-//*
-//chassis
-std::shared_ptr<ThreeEncoderXDriveModel> model;
-std::shared_ptr<CustomOdometry> odom;
-
-//controllers
-std::shared_ptr<OdomXController> controller;
-std::shared_ptr<PathFollower> follower;
-
-//sensors
-std::shared_ptr<ADIEncoder> left;
-std::shared_ptr<ADIEncoder> right;
-std::shared_ptr<ADIEncoder> middle;
-
-//paths
-std::map<std::string,PursuitPath> paths;
-
-//intake
-std::shared_ptr<MotorGroup> intake;
-
-//tray
-std::shared_ptr<MotorGroup> tray;
-std::shared_ptr<Potentiometer> trayPotent;
-std::shared_ptr<AsyncPosPIDController> trayController;
-std::shared_ptr<AsyncPosPIDController> viciousTrayController;
-
-//tray vals
-double trayUp = 3000;
-double trayMiddleUp = 1000;
-double trayMiddleDown = 1000;
-double trayDown = 10;
-bool trayMiddleUpToggle = false;
-bool trayMiddleDownToggle = false;
-
-//lift
-std::shared_ptr<Motor> lift;
-std::shared_ptr<AsyncPosPIDController> liftController;
-
-double liftUp = 2300;
-double liftMiddle = 2000;
-double liftDown = -50;
-
-//controller
-std::shared_ptr<Controller> master;
-
-//screen
-std::shared_ptr<GUI::Screen> screen;
-GUI::Selector* selector;
-//*/
-
 void initialize() {
+	pros::delay(100);
+
+	Logger::setDefaultLogger(
+	    std::make_shared<Logger>(
+	        TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
+	        "/ser/sout", // Output to the PROS terminal
+	        Logger::LogLevel::warn // Show errors and warnings
+	    )
+	);
+
 	printf("init\n");
 
-	std::shared_ptr<Motor> topRight = std::make_shared<Motor>(-9);
-	std::shared_ptr<Motor> topLeft = std::make_shared<Motor>(2);
-	std::shared_ptr<Motor> bottomLeft = std::make_shared<Motor>(20);
-	std::shared_ptr<Motor> bottomRight = std::make_shared<Motor>(-1);
+	Intake::getIntake()->startTask();
+	Tilter::getTilter()->startTask();
+	Lift::getLift()->startTask();
 
-	bottomLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomLeft->setGearing(AbstractMotor::gearset::red);
-	bottomRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	bottomRight->setGearing(AbstractMotor::gearset::red);
-	topLeft->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topLeft->setGearing(AbstractMotor::gearset::red);
-	topRight->setBrakeMode(AbstractMotor::brakeMode::coast);
-	topRight->setGearing(AbstractMotor::gearset::red);
-
-	left = std::make_shared<ADIEncoder>(1,2,false);
-	right = std::make_shared<ADIEncoder>(7,8,false);
-	middle = std::make_shared<ADIEncoder>(3,4,false);
+	Intake::getIntake()->setNewState(IntakeState::hold);
+	Tilter::getTilter()->setNewState(TilterState::down);
+	Lift::getLift()->setNewState(LiftState::down);
 
 	master = std::make_shared<Controller>();
-	std::string out("line");
-	master->setText(0,0,"init");
-	master->setText(1,1,out);
-	master->setText(2,2,"hi");
-	
-	model = std::make_shared<ThreeEncoderXDriveModel>(
-		topLeft,
-		topRight,
-		bottomRight,
-		bottomLeft,
-		left,
-		right,
-		middle,
-		200,
-		12000
-	);
 
-	odom = std::make_shared<CustomOdometry>(
-		model,
-		ChassisScales({2.8114_in,9.883_in,.01_in,2.8114_in},360),
-		TimeUtilFactory().create()
-	);
-	odom->setState(State(0_in, 0_in, 0_deg));
-
-	//*
-	controller = std::make_shared<OdomXController>(
-		model,
-		odom,
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.0045,.0000,.0001,.00},
-			TimeUtilFactory::withSettledUtilParams(75, 10, 250_ms)),
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.02,.0000,.001,.00},
-			TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)),
-		std::make_unique<IterativePosPIDController>(IterativePosPIDController::Gains
-			{.017,.0000,.0000,.00},
-			TimeUtilFactory::withSettledUtilParams(50, 5, 250_ms)),
-		TimeUtilFactory().create()
-	);//*/
-
-	follower = std::make_shared<PathFollower>(
-		model,
-		odom,
-		ChassisScales({4_in,9_in},imev5GreenTPR),
-		4_in,
-		TimeUtilFactory().create()
-	);
-
-	PursuitLimits limits(
-		0.2_mps,  1.1_mps2, .1_mps,
-        0.4_mps2, 0_mps,    40_mps
-	);
-
-	PursuitLimits matchLimits(
-		0.2_mps,  1.1_mps2, 1_mps,
-        0.4_mps2, 0.2_mps,   5_mps
-	);
-	
-	paths.insert(
-		{
-			"skills9Cube",
-			PathGenerator::generate(
-				SimplePath({
-					//start pos
-					{7.0_in,26.9_in},
-					//first cube
-					{22.95_in,26.97_in},
-					//4th cube
-					{41.51_in,26.08_in},
-					//avoid tower
-					{52.25_in,14.84_in},
-					//grab cube
-					{60.96_in,14.04_in},
-					//grab cube
-					{66.96_in,14.04_in},
-					//grab sixth cube
-					{82.47_in,22.49_in},
-					//ninth cube
-					{103.21_in,22.66_in},
-				})
-				.generate(.5_cm)
-				.smoothen(.001, 1e-10 * meter),
-				limits
-			)
-		}
-	);
-	paths.insert(
-		{
-			"redSide",
-			PathGenerator::generate(
-				SimplePath({
-
-					//start pos
-					{7.0_in,26.9_in},
-					//first cube
-					{22.95_in,26.97_in},
-					//4th cube
-					{41.51_in,26.08_in},
-					//turn 1
-					{50.94_in,26.87_in},
-					//grab cube
-					{55.29_in,39.14_in},
-					{51.96_in,44.14_in},
-					{46.19_in,47.86_in},
-					{31.72_in,48.10_in},
-					//{_in,_in},//*/
-				})
-				.generate(.5_cm)
-				.smoothen(.001, 1e-10 * meter),
-				matchLimits
-			)
-		}
-	);
-
-	intake = std::make_shared<MotorGroup>(MotorGroup({14,-18}));
-	intake->setGearing(AbstractMotor::gearset::green);
- 
-	tray = std::make_shared<MotorGroup>(MotorGroup({-17}));
-	tray->setGearing(AbstractMotor::gearset::red);
-
-	trayPotent = std::make_shared<Potentiometer>(6);
-
-	trayController = std::make_shared<AsyncPosPIDController>(
-		tray->getEncoder(),
-		tray,
-		TimeUtilFactory::withSettledUtilParams(),
-		.0003,
-		.0000,
-		.000,
-		.0
-	);
-	trayController->startThread();
-	trayController->flipDisable(false);
-
-	lift = std::make_shared<Motor>(15);
-	lift->setGearing(AbstractMotor::gearset::red);
-	liftController = std::make_shared<AsyncPosPIDController>(
-		lift->getEncoder(),
-		lift,
-		TimeUtilFactory::withSettledUtilParams(),
-		.0009,
-		.0000,
-		.000,
-		.0
-	);
-	liftController->startThread();
-	liftController->flipDisable(false);
+	intakeUpBtn = std::make_shared<ControllerButton>(ControllerDigital::R1);
+	intakeDownBtn = std::make_shared<ControllerButton>(ControllerDigital::R2);
+	tilterUpBtn = std::make_shared<ControllerButton>(ControllerDigital::L1);
+	tilterDownBtn = std::make_shared<ControllerButton>(ControllerDigital::L2);
+	liftUpBtn = std::make_shared<ControllerButton>(ControllerDigital::right);
+	liftMidBtn = std::make_shared<ControllerButton>(ControllerDigital::Y);
 
 	screen = std::make_shared<GUI::Screen>( lv_scr_act(), LV_COLOR_MAKE(38,84,124) );
-	screen->startTask("screenTask");
 
-	selector = dynamic_cast<GUI::Selector*>(
-    	&screen->makePage<GUI::Selector>("Selector")
-			.button("Default", [&]() {
-				Auton::skills();
+	selector = dynamic_cast<GUI::Selector*>(		
+    	&screen->makePage<GUI::Selector>("Skid Steer Selector")
+			.button("Straight PID", [&]() {
+
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->startThread();
+				chassis->pidController->moveDistance(48_in);
+				chassis->pidController->moveDistance(-48_in);
+				chassis->pidController->stop();
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})			
+			.button("Turn PID", [&]() {
+
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->skidSteerModel->setMaxVoltage(10000);
+				chassis->pidController->startThread();
+				chassis->pidController->turnAngle( 270_deg);
+				chassis->pidController->turnAngle(-270_deg);
+				chassis->pidController->stop();
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})		
+			.button("Test PID", [&]() {
+
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->pidController->startThread();
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->moveDistance(38_in);
+				chassis->skidSteerModel->setMaxVoltage(11000);
+				chassis->pidController->moveDistance(-14_in);
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->turnAngle(135_deg);
+				chassis->pidController->stop();
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
 			})
-			.button("Test", [&]() { 
-				printf("test\n");
-				Auton::test(true);
+			.newRow()
+			.button("Turn Profile", [&]() {
+				printf("running test profile\n");
+
+//				std::cout << chassis->log->getColumnHeaders();
+
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+				chassis->linearProfileTurn( 270_deg);
+				chassis->linearProfileTurn(-270_deg);
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+
+			})
+			.button("Fwd Profile", [&]() {
+				printf("running test profile\n");
+
+//				std::cout << chassis->log->getColumnHeaders();
+
+//				Intake::getIntake()->setNewState(IntakeState::inFull);
+
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+				chassis->linearProfileStraight(48_in);		
+				chassis->linearProfileStraight(-48_in);	
+
+//				Intake::getIntake()->setNewState(IntakeState::hold);
+			})	
+			.build()
+		);
+
+	intakeActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Intake")
+			.button("In Full", [&]() {
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+			})
+			.button("Out Full", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::outFull);
+			 })
+			.button("In Half", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::inHalf);
+			 })
+			.button("Out Half", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
 			 })
 			.newRow()
-			.button("Red Big", [&]() { 
-				;
+			.button("Move Distance", [&](){
+				Intake::getIntake()->setDistance(-5.5_in);
+				Intake::getIntake()->setNewState(IntakeState::moveDistance);
 			 })
-			.button("Red Small", [&]() { 
-				printf("redSmall");
-				Auton::small();
-			 })
-			.newRow()
-			.button("Blue Big", [&](){
-				;
-			 })
-			.button("Blue Small", [&]() { 
-				printf("blueSmall");
-				Auton::small(false);
+			.button("Hold", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::hold);
+			})
+			.button("Off", [&]() { 
+				Intake::getIntake()->setNewState(IntakeState::off);
 			})
 			.build()
 		);
 
+	liftActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Lift")
+			.button("Mid Tower", [&]() {
+				Lift::getLift()->setState(LiftState::midTower);
+			})
+			.button("Low Tower", [&]() { 
+				Lift::getLift()->setState(LiftState::lowTower);
+			 })
+			.button("2 Cube ", [&]() { 
+				Lift::getLift()->setState(LiftState::a2CubeStack);
+			 })
+			.button("3 Cube", [&]() { 
+				Lift::getLift()->setState(LiftState::a3CubeStack);
+			 })
+			.newRow()
+			.button("4 Cube", [&](){
+				Lift::getLift()->setState(LiftState::a4CubeStack);
+			 })
+			.button("Down", [&]() { 
+				Lift::getLift()->setState(LiftState::down);
+			})			
+			.button("Off", [&]() { 
+				Lift::getLift()->setState(LiftState::off);
+			})
+			.build()
+		);
+
+	tilterActions = dynamic_cast<GUI::Actions*>(
+    	&screen->makePage<GUI::Actions>("Tilter")
+			.button("Up", [&](){
+				Tilter::getTilter()->setState(TilterState::up);
+			})
+			.button("liftUpBtn", [&](){
+				Tilter::getTilter()->setState(TilterState::liftUp);
+			})
+			.newRow()
+			.button("Down", [&](){
+				Tilter::getTilter()->setState(TilterState::down);
+			})
+			.button("Off", [&](){
+				Tilter::getTilter()->setState(TilterState::off);
+			})
+			.build()
+		);
 	screen->makePage<GUI::Odom>("Odom")
-		.attachOdom(odom)
+		.attachOdom(chassis->odom)
 		.attachResetter([&](){
-			model->resetSensors();
+			chassis->skidSteerModel->resetSensors();
 		});
 
-	screen->makePage<GUI::Graph>("Temp")
-		.withRange(0,100)
-		.withGrid(2,4)
-		.withSeries("Intake", LV_COLOR_MAKE(6,214,160), []() { return intake->getTemperature(); pros::delay(100); })
-		.withSeries("Tray", LV_COLOR_MAKE(239,71,111), []() { return tray->getTemperature(); pros::delay(100); })
-		.withSeries("Drive", LV_COLOR_MAKE(255,209,102), []() { return model->getBottomLeftMotor()->getTemperature(); pros::delay(100); })
-		.withSeries("Lift", LV_COLOR_MAKE(255,255,255), []() { return lift->getTemperature(); pros::delay(100); });
-
 	printf("init end\n");
+
+	nh->initNode();
+	nh->advertise(chatter);
 }
 
 void disabled() {}
@@ -279,124 +208,107 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
+	printf("autonomous\n");
+
 	auto time = pros::millis();
+//	chassis->log->flipDisable(false);
 
-	trayController->flipDisable(true);
+	printf("battery voltage = %d\n", pros::battery::get_voltage());
 
-	selector->run();
+	chassis->skidSteerModel->resetSensors();
+	chassis->stopControllers();
 
-	trayController->flipDisable(false);
-	
-	master->setText(0,0,std::to_string(pros::millis()-time));
+	if(pros::battery::get_voltage() >= 12000){
+		selector->run();
+	}
+
+//	chassis->log->flipDisable(true);
+
+	printf("end autonomous\n");
 }
 
 void opcontrol() {
 
-	odom->setState(State(7_in,27_in, 0_deg));
-
 	printf("opcontrol\n");
-
-	trayController->flipDisable(false);
-
-	bool intakeToggle = false;
 
 	std::string out("line");
 	master->setText(0,0,"opcontrol");
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
+	chassis->stopControllers();
+	chassis->skidSteerModel->setMaxVoltage(12000);
+
 	while (true) {
-		//cheesy x arcade
-		double forward = 0;
-		double right = 0;
-		double yaw = 0;
+		ros_msg.data = chassis->skidSteerModel->getSensorVals()[0];
+		chatter.publish(&ros_msg);
+		nh->spinOnce();
 
-		forward = master->getAnalog(ControllerAnalog::rightY);
-		right = master->getAnalog(ControllerAnalog::rightX);
-		yaw = master->getAnalog(ControllerAnalog::leftX);
+		chassis->skidSteerModel->arcade(
+			master->getAnalog(ControllerAnalog::rightY), 
+			master->getAnalog(ControllerAnalog::leftX));
 
-		if(tray->getEncoder()->get()>2000){
-			forward /= 2;
-			right /= 2;
-			yaw /= 2;
-		}
-
-		model->xArcade(right, forward, yaw, 0.1);
-
-		//INTAKE
-		if(master->getDigital(ControllerDigital::Y)){
-			intakeToggle=!intakeToggle;		
-			while(master->getDigital(ControllerDigital::Y)){
-				pros::delay(20);
-			}
-		}else if(master->getDigital(ControllerDigital::R1)&&master->getDigital(ControllerDigital::R2)){
-			intakeToggle=!intakeToggle;		
-			while(master->getDigital(ControllerDigital::R1)&&master->getDigital(ControllerDigital::R2)){
-				pros::delay(20);
-			}
-		}else if(master->getDigital(ControllerDigital::R1)){
-			intake->moveVoltage(12000);
-			intakeToggle = false;
-		}else if(master->getDigital(ControllerDigital::R2)){
-			intake->moveVoltage(-12000);
-			intakeToggle = false;
-		}else if(intakeToggle){
-			intake->moveVoltage(8000);
+		if(intakeUpBtn->isPressed() && intakeDownBtn->isPressed()){
+			printf("Intake Up and Intake Down Button Pressed\n");
+			Intake::getIntake()->setNewState(IntakeState::off);
+		}else if(intakeUpBtn->isPressed()){
+			printf("Intake Up Button Pressed\n");
+			Intake::getIntake()->setNewState(IntakeState::inFull);
+		}else if(intakeDownBtn->isPressed()){
+			printf("Intake Down Button Pressed\n");
+			Intake::getIntake()->setNewState(IntakeState::outHalf);			
 		}else{
-			intake->moveVelocity(0);
+			Intake::getIntake()->setNewState(IntakeState::hold);
 		}
 
-		//TRAY
-		if(master->getDigital(ControllerDigital::L1)){
-			//trayController up			
-			trayController->setTarget(4950);
-			pros::delay(20);
-		}else if(master->getDigital(ControllerDigital::L2)){
-			//trayController down
-			trayController->setTarget(trayDown);
-			liftController->setTarget(liftDown);
-			pros::delay(20);
+		if(tilterUpBtn->isPressed() && tilterDownBtn->isPressed()){
+			printf("Tilter Up and Tilter Down Button Pressed\n");
+			Tilter::getTilter()->setNewState(TilterState::off);
+		}else if(tilterUpBtn->isPressed()){
+			printf("Tilter Up Button Pressed\n");
+			if( Lift::getLift()->getState() != LiftState::down ){
+				Lift::getLift()->setStateBlocking(LiftState::down);
+			}
+			Tilter::getTilter()->setNewState(TilterState::up);
+		}else if(tilterDownBtn->isPressed()){
+			printf("Tilter Down Button Pressed\n");
+			Tilter::getTilter()->setNewState(TilterState::down);
 		}
 
-		//LIFT
-		if(master->getDigital(ControllerDigital::down)){
-			//liftController middle up
-			auto time = TimeUtilFactory().create();
-
-			bool exit = false;
-
-			while(!exit){
-				if(time.getTimer()->getDtFromStart().convert(millisecond) < 250 && master->getDigital(ControllerDigital::down) ){
-					liftController->setTarget(liftUp);
-					trayController->setTarget(trayMiddleUp);
-					if(lift->getEncoder()->get()>1000){
-						liftController->setTarget(liftDown);
-						trayController->setTarget(trayDown);
-					}
-					exit = true;
-				}else if(!master->getDigital(ControllerDigital::down)){
-					exit = true;
-				}
-			}
-			while(master->getDigital(ControllerDigital::down)){
-				pros::delay(20);
-			}
-		}else if(master->getDigital(ControllerDigital::right)){
-			//liftController up
-			liftController->setTarget(liftMiddle);
-			trayController->setTarget(trayMiddleUp);			
-			if(lift->getEncoder()->get()>1000){
-				liftController->setTarget(liftDown);
-				trayController->setTarget(trayDown);
-			}
-			while(master->getDigital(ControllerDigital::right)){
-				pros::delay(20);
-			}
-		}else if(master->getDigital(ControllerDigital::B)){
-			//nothing
+		if(liftUpBtn->changedToPressed() || liftMidBtn->changedToPressed()){
+			printf("lift Up Button or Lift Mid Button Pressed\n");
+			liftToggle = !liftToggle;
 		}
-		
+
+		if(liftUpBtn->isPressed() && liftMidBtn->isPressed()){
+			printf("Lift Up and Lift Mid Button Pressed\n");
+			Lift::getLift()->setNewState(LiftState::off);
+		}else if(liftUpBtn->isPressed() && liftToggle ){
+			printf("Lift Up Button Pressed and liftToggle\n");
+			if( Tilter::getTilter()->getState() == TilterState::up ){
+				Tilter::getTilter()->setStateBlocking(TilterState::liftUp);
+			}else{
+				Tilter::getTilter()->setNewState(TilterState::liftUp);
+			}
+			Lift::getLift()->setNewState(LiftState::midTower);
+		}else if(liftMidBtn->isPressed() && liftToggle ){
+			printf("Lift Mid Button Pressed and liftToggle\n");
+			if( Tilter::getTilter()->getState() == TilterState::up ){
+				Tilter::getTilter()->setStateBlocking(TilterState::liftUp);
+			}else{
+				Tilter::getTilter()->setNewState(TilterState::liftUp);
+			}
+			Lift::getLift()->setNewState(LiftState::lowTower);
+		}else if( liftUpBtn->isPressed() && !liftToggle ){
+			printf("Lift Up Button Pressed and not liftToggle\n");
+			Lift::getLift()->setNewState(LiftState::down);
+			Tilter::getTilter()->setNewState(TilterState::down);
+		}else if( liftMidBtn->isPressed() && !liftToggle ){
+			printf("Lift Mid Button Pressed and not liftToggle\n");
+			Lift::getLift()->setNewState(LiftState::down);
+			Tilter::getTilter()->setNewState(TilterState::down);
+		}
+
 		pros::delay(20);
 	}
 }
-
