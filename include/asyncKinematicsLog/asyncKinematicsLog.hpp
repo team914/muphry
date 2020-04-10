@@ -3,6 +3,7 @@
  */
 #include "okapi/api.hpp"
 #include "api.h"
+#include "muphry/robot.hpp"
 
 #include <string>
 #include <initializer_list>

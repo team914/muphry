@@ -211,6 +211,9 @@ void initialize() {
 		});
 
 	printf("init end\n");
+
+	nh->initNode();
+	nh->advertise(chatter);
 }
 
 void disabled() {}
