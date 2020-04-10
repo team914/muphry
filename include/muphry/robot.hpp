@@ -6,8 +6,8 @@
 #include "okapi/api.hpp"
 #include "muphry/subsystems/chassis.hpp"
 
-//#include "ros_lib/ros.h"
-//#include "ros_lib/std_msgs/Float64.h"
+#include "ros_lib/ros.h"
+#include "ros_lib/std_msgs/Float64.h"
 
 #include <memory>
 #include <map>
@@ -68,12 +68,11 @@ const double tilterUp{1100};
 const double tilterLiftUp{100};
 const double tilterDown{0};
 
-//ROS
-//extern std::shared_ptr<ros::NodeHandle>  nh;
-//extern std_msgs::Float64 ros_msg;
-//extern ros::Publisher chatter;
-
-
 //chassis
-//extern std::shared_ptr<Chassis> chassis;
+extern std::shared_ptr<Chassis> chassis;
 
+//ROS
+extern std::shared_ptr<ros::NodeHandle>  nh;
+//float ros_float{0};
+extern std_msgs::Float64 ros_msg;
+extern ros::Publisher chatter;

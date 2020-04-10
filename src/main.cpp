@@ -48,16 +48,12 @@ void initialize() {
     	&screen->makePage<GUI::Selector>("Skid Steer Selector")
 			.button("Straight PID", [&]() {
 
-//				Intake::getIntake()->setNewState(IntakeState::inFull);
-
-//				chassis->skidSteerModel->setMaxVoltage(12000);
-
-//				chassis->pidController->startThread();
-
-//				chassis->pidController->moveDistance(48_in);
-//				chassis->pidController->moveDistance(-48_in);
-
-//				chassis->pidController->stop();
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->startThread();
+				chassis->pidController->moveDistance(48_in);
+				chassis->pidController->moveDistance(-48_in);
+				chassis->pidController->stop();
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 
@@ -66,14 +62,11 @@ void initialize() {
 
 //				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-//				chassis->skidSteerModel->setMaxVoltage(10000);
-
-//				chassis->pidController->startThread();
-
-//				chassis->pidController->turnAngle( 270_deg);
-//				chassis->pidController->turnAngle(-270_deg);
-
-//				chassis->pidController->stop();
+				chassis->skidSteerModel->setMaxVoltage(10000);
+				chassis->pidController->startThread();
+				chassis->pidController->turnAngle( 270_deg);
+				chassis->pidController->turnAngle(-270_deg);
+				chassis->pidController->stop();
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 
@@ -82,18 +75,14 @@ void initialize() {
 
 //				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-//				chassis->pidController->startThread();
-
-//				chassis->skidSteerModel->setMaxVoltage(12000);
-//				chassis->pidController->moveDistance(38_in);
-
-//				chassis->skidSteerModel->setMaxVoltage(11000);
-//				chassis->pidController->moveDistance(-14_in);
-
-//				chassis->skidSteerModel->setMaxVoltage(12000);
-//				chassis->pidController->turnAngle(135_deg);
-
-//				chassis->pidController->stop();
+				chassis->pidController->startThread();
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->moveDistance(38_in);
+				chassis->skidSteerModel->setMaxVoltage(11000);
+				chassis->pidController->moveDistance(-14_in);
+				chassis->skidSteerModel->setMaxVoltage(12000);
+				chassis->pidController->turnAngle(135_deg);
+				chassis->pidController->stop();
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 			})
@@ -105,11 +94,10 @@ void initialize() {
 
 //				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-//				chassis->leftProfileController->flipDisable(false);
-//				chassis->rightProfileController->flipDisable(false);
-
-//				chassis->linearProfileTurn( 270_deg);
-//				chassis->linearProfileTurn(-270_deg);
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+				chassis->linearProfileTurn( 270_deg);
+				chassis->linearProfileTurn(-270_deg);
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 
@@ -121,11 +109,10 @@ void initialize() {
 
 //				Intake::getIntake()->setNewState(IntakeState::inFull);
 
-//				chassis->leftProfileController->flipDisable(false);
-//				chassis->rightProfileController->flipDisable(false);
-
-//				chassis->linearProfileStraight(48_in);		
-//				chassis->linearProfileStraight(-48_in);	
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+				chassis->linearProfileStraight(48_in);		
+				chassis->linearProfileStraight(-48_in);	
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 			})	
@@ -204,16 +191,16 @@ void initialize() {
 			})
 			.build()
 		);
-//	screen->makePage<GUI::Odom>("Odom")
-//		.attachOdom(chassis->odom)
-//		.attachResetter([&](){
-//			chassis->skidSteerModel->resetSensors();
-//		});
+	screen->makePage<GUI::Odom>("Odom")
+		.attachOdom(chassis->odom)
+		.attachResetter([&](){
+			chassis->skidSteerModel->resetSensors();
+		});
 
 	printf("init end\n");
 
-//	nh->initNode();
-//	nh->advertise(chatter);
+	nh->initNode();
+	nh->advertise(chatter);
 }
 
 void disabled() {}
@@ -228,8 +215,8 @@ void autonomous() {
 
 	printf("battery voltage = %d\n", pros::battery::get_voltage());
 
-//	chassis->skidSteerModel->resetSensors();
-//	chassis->stopControllers();
+	chassis->skidSteerModel->resetSensors();
+	chassis->stopControllers();
 
 	if(pros::battery::get_voltage() >= 12000){
 		selector->run();
@@ -249,14 +236,17 @@ void opcontrol() {
 	master->setText(1,1,out);
 	master->setText(2,2,"hi");
 
-//	chassis->stopControllers();
-//	chassis->skidSteerModel->setMaxVoltage(12000);
+	chassis->stopControllers();
+	chassis->skidSteerModel->setMaxVoltage(12000);
 
 	while (true) {
+		ros_msg.data = chassis->skidSteerModel->getSensorVals()[0];
+		chatter.publish(&ros_msg);
+		nh->spinOnce();
 
-//		chassis->skidSteerModel->arcade(
-//			master->getAnalog(ControllerAnalog::rightY), 
-//			master->getAnalog(ControllerAnalog::leftX));
+		chassis->skidSteerModel->arcade(
+			master->getAnalog(ControllerAnalog::rightY), 
+			master->getAnalog(ControllerAnalog::leftX));
 
 		if(intakeUpBtn->isPressed() && intakeDownBtn->isPressed()){
 			printf("Intake Up and Intake Down Button Pressed\n");
