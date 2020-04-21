@@ -18,10 +18,12 @@ Chassis::Chassis(){
     skidSteerModel->setBrakeMode(chassisBrakeMode);
     skidSteerModel->setGearing(chassisGearset);
 
-    odom = std::make_shared<CustomOdometry>(
+    odom = std::make_shared<TwoEncoderOdometry>(
+        TimeUtilFactory().create(),
         skidSteerModel,
         adiScales
     );
+    odom->setState(OdomState{6_ft,6_ft,0_deg});
 
     pidController = std::make_shared<ChassisControllerPID>(
         TimeUtilFactory().create(),

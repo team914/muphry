@@ -35,7 +35,7 @@
 #ifndef _ROSSERIAL_VEX_CORTEX_ROS_H_
 #define _ROSSERIAL_VEX_CORTEX_ROS_H_
 
-#include "ros_lib/ros/node_handle.h"
+#include "ros_lib/api.h"
 
 #include "ros_lib/V5Hardware.h"
 

@@ -7,7 +7,11 @@
 #include "muphry/subsystems/chassis.hpp"
 
 #include "ros_lib/ros.h"
-#include "ros_lib/std_msgs/Float64.h"
+#include "ros_lib/ros/time.h"
+#include "ros_lib/std_msgs/Time.h"
+#include "ros_lib/std_msgs/Float32.h"
+#include "ros_lib/geometry_msgs/Pose2D.h"
+#include "ros_lib/tf/tf.h"
 
 #include <memory>
 #include <map>
@@ -73,6 +77,30 @@ extern std::shared_ptr<Chassis> chassis;
 
 //ROS
 extern std::shared_ptr<ros::NodeHandle>  nh;
-//float ros_float{0};
-extern std_msgs::Float64 ros_msg;
-extern ros::Publisher chatter;
+
+extern std_msgs::Float32 posL_msg;
+extern std_msgs::Float32 velL_msg;
+extern std_msgs::Float32 accL_msg;
+extern std_msgs::Float32 jrkL_msg;
+extern std_msgs::Float32 snpL_msg;
+
+extern ros::Publisher posL;
+extern ros::Publisher velL;
+extern ros::Publisher accL;
+extern ros::Publisher jrkL;
+extern ros::Publisher snpL;
+
+extern std_msgs::Float32 posR_msg;
+extern std_msgs::Float32 velR_msg;
+extern std_msgs::Float32 accR_msg;
+extern std_msgs::Float32 jrkR_msg;
+extern std_msgs::Float32 snpR_msg;
+
+extern ros::Publisher posR;
+extern ros::Publisher velR;
+extern ros::Publisher accR;
+extern ros::Publisher jrkR;
+extern ros::Publisher snpR;
+
+extern geometry_msgs::Pose pose_msg;
+extern ros::Publisher pose;
