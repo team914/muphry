@@ -22,7 +22,6 @@ class Tilter : public StateMachine<TilterState, TilterState::off> {
     Tilter();
 
     std::shared_ptr<Motor> tilterMotor{nullptr};
-    std::shared_ptr<AsyncPosPIDController> tilterController{nullptr};
 
     virtual void initialize();
 
@@ -31,6 +30,7 @@ class Tilter : public StateMachine<TilterState, TilterState::off> {
     static Tilter* tilter;
 
     public:
+    std::shared_ptr<AsyncPosPIDController> tilterController{nullptr};
     static Tilter* getTilter();
 
 };

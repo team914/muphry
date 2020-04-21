@@ -17,7 +17,7 @@ class Chassis{
     Chassis();
 
     //odom
-    std::shared_ptr<CustomOdometry> odom{nullptr};
+    std::shared_ptr<TwoEncoderOdometry> odom{nullptr};
 
     //chassis models
     std::shared_ptr<SkidSteerModel> skidSteerModel{nullptr};
@@ -59,19 +59,19 @@ class Chassis{
     const ChassisScales chassisScales{{4.036_in,9.183748_in}, imev5GreenTPR};
     const QLength lookahead{4_in};
     const QLength driveRadius{4_in};
-    const double chassisDistancekP{.0028};
-    const double chassisDistancekI{.0005};
+    const double chassisDistancekP{.003};
+    const double chassisDistancekI{.001};
     const double chassisDistancekD{.00016};
-    const TimeUtil chassisDistanceTimeUtil{TimeUtilFactory::withSettledUtilParams(15, 10, 100_ms)};
-    const double chassisTurnkP{.0016};
-    const double chassisTurnkI{.00025};
+    const TimeUtil chassisDistanceTimeUtil{TimeUtilFactory::withSettledUtilParams(25, 10, 100_ms)};
+    const double chassisTurnkP{.0022};
+    const double chassisTurnkI{.0005};
     const double chassisTurnkD{.00005};
-    const TimeUtil chassisTurnTimeUtil{TimeUtilFactory::withSettledUtilParams(10, 5, 100_ms)};
-    const double chassisAnglekP{.0002};
-    const double chassisAnglekI{.0008};
+    const TimeUtil chassisTurnTimeUtil{TimeUtilFactory::withSettledUtilParams(15, 5, 100_ms)};
+    const double chassisAnglekP{.0016};
+    const double chassisAnglekI{.000};
     const double chassisAnglekD{.0000};
     const TimeUtil chassisAngleTimeUtil{TimeUtilFactory::withSettledUtilParams(1000, 5, 100_ms)};
-    const PathfinderLimits straightLimits{1,1.4,12.8};
+    const PathfinderLimits straightLimits{1.75,.75,12.8};
     const double turnScale{.25};
     const PathfinderLimits turnLimits{  straightLimits.maxVel*turnScale, 
                                         straightLimits.maxAccel*turnScale,

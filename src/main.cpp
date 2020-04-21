@@ -7,17 +7,201 @@
 
 #include "api.h"
 
+#include "lib7842/api.hpp"
+
+#include <iostream>
+#include <stdio.h>
+
+#include "csv/CSVWriter.h"
+
 using namespace lib7842;
 using namespace lib7842::units;
 using namespace okapi;
 using namespace okapi::literals;
 
+#define SD_CARD 0
+#define ROS 0
+#define TERMINAL 1
+
+#if SD_CARD == 1
+FILE* writeKnmc;
+FILE* writeOdom;
+#endif
+
+pros::task_t graphing;
+pros::task_t odomTask;
+
+void loop(void* params){
+
+	auto lposFilter   = std::make_shared<AverageFilter<10>>();
+    auto lspeedFilter = std::make_shared<AverageFilter<10>>();
+    auto laccelFilter = std::make_shared<AverageFilter<10>>();
+    auto ljerkFilter  = std::make_shared<AverageFilter<10>>();
+    auto lsnapFilter  = std::make_shared<AverageFilter<10>>();
+
+	auto rposFilter   = std::make_shared<AverageFilter<10>>();
+    auto rspeedFilter = std::make_shared<AverageFilter<10>>();
+    auto raccelFilter = std::make_shared<AverageFilter<10>>();
+    auto rjerkFilter  = std::make_shared<AverageFilter<10>>();
+    auto rsnapFilter  = std::make_shared<AverageFilter<10>>();
+
+    int cnt = 1;
+
+    bool disabled{false};
+    double dt{0};
+    double lpos{0},   llastPos{0};
+    double lspeed{0}, llastSpeed{0};
+    double laccel{0}, llastAccel{0};
+    double ljerk{0},  llastJerk{0};
+    double lsnap{0},  llastSnap{0};
+
+    double rpos{0},   rlastPos{0};
+    double rspeed{0}, rlastSpeed{0};
+    double raccel{0}, rlastAccel{0};
+    double rjerk{0},  rlastJerk{0};
+    double rsnap{0},  rlastSnap{0};
+
+    double tpr{imev5GreenTPR};
+    double ratio{1};
+    QLength wheelDiameter{4.036_in};
+    std::unique_ptr<AbstractTimer> loopDtTimer = std::make_unique<Timer>();
+
+	while(true){
+        //get delta time
+        dt = loopDtTimer->getDtFromMark().convert(second);
+
+        //get position from encoder feed back and convert to meters
+        lpos = lposFilter->filter(chassis->skidSteerModel->getSensorVals()[0]) / (tpr * ratio) * wheelDiameter.convert(meter) * PI;
+        rpos = rposFilter->filter(chassis->skidSteerModel->getSensorVals()[1]) / (tpr * ratio) * wheelDiameter.convert(meter) * PI;
+
+        //this will make it so that the sensors don't send crazy feedback at program beginning
+        if(std::abs(lpos) >= 1000){lpos = 0;}
+        if(std::abs(rpos) >= 1000){rpos = 0;}
+
+        //calculate derivatives of speed to 4th degree
+        if(llastPos != 0){  lspeed = lspeedFilter->filter((lpos-  llastPos)/ dt);}
+        if(llastSpeed != 0){laccel = laccelFilter->filter((lspeed-llastSpeed)/dt);}
+        if(llastAccel != 0){ljerk =  ljerkFilter->filter( (laccel-llastAccel)/dt);}
+        if(llastJerk != 0){ lsnap =  lsnapFilter->filter( (ljerk- llastJerk)/dt);}
+
+        if(rlastPos != 0){  rspeed = rspeedFilter->filter((rpos-  rlastPos)/ dt);}
+        if(rlastSpeed != 0){raccel = raccelFilter->filter((rspeed-rlastSpeed)/dt);}
+        if(rlastAccel != 0){rjerk =  rjerkFilter->filter( (raccel-rlastAccel)/dt);}
+        if(rlastJerk != 0){ rsnap =  rsnapFilter->filter( (rjerk- rlastJerk)/dt);}
+
+#if ROS == 1
+			//publish values to ros node(s)
+			posL_msg.data = lpos;
+			velL_msg.data = lspeed;
+			accL_msg.data = laccel;
+			jrkL_msg.data = ljerk;
+			snpL_msg.data = lsnap;
+			posL.publish(&posL_msg);
+			velL.publish(&velL_msg);
+			accL.publish(&accL_msg);
+			jrkL.publish(&jrkL_msg);
+			snpL.publish(&snpL_msg);
+
+			posR_msg.data = rpos;
+			velR_msg.data = rspeed;
+			accR_msg.data = raccel;
+			jrkR_msg.data = rjerk;
+			snpR_msg.data = rsnap;
+			posR.publish(&posR_msg);
+			velR.publish(&velR_msg);
+			accR.publish(&accR_msg);
+			jrkR.publish(&jrkR_msg);
+			snpR.publish(&snpR_msg);
+#endif		
+#if SD_CARD == 1
+//			writeKnmc->enableAutoNewRow(6);
+//			writeKnmc->newRow() << pros::millis() * 1000 << lpos << lspeed << laccel << ljerk << lsnap;
+//			writeKnmc->writeToFile("/dev/logKnmc.csv");
+#endif
+#if TERMINAL == 1
+			std::string msg = "knmcs\t," + 
+			std::to_string( (double)pros::millis() / 1000) + 
+			"\t," +
+			std::to_string( lpos ) + 
+			"\t," + 
+			std::to_string(lspeed) + 
+			"\t,"+ 
+			std::to_string(laccel) + 
+			"\t," + 
+			std::to_string(ljerk) + 
+			"\t," + 
+			std::to_string(lsnap) + 
+			"\n";
+			printf(msg.c_str());
+#endif
+
+		//update last derivative each loop
+		llastPos   = lpos;
+		llastSpeed = lspeed;
+		llastAccel = laccel;
+		llastJerk  = ljerk;
+		llastSnap  = lsnap;
+
+		rlastPos   = rpos;
+		rlastSpeed = rspeed;
+		rlastAccel = raccel;
+		rlastJerk  = rjerk;
+		rlastSnap  = rsnap;
+
+        //place mark for timer
+		loopDtTimer->placeMark();
+
+		if(ROS){
+			//spin
+			nh->spinOnce();
+		}
+
+
+		pros::delay(50);
+	}
+}
+
+void odomFnc(void* params){
+	while(true){
+		chassis->odom->step();
+
+		double x = chassis->odom->getState().x.convert(meter);
+		double y = chassis->odom->getState().y.convert(meter);
+		double theta = chassis->odom->getState().theta.convert(radian);
+
+#if SD_CARD == 1
+
+#endif
+#if ROS == 1
+			pose_msg.position.x = x;
+			pose_msg.position.y = y;
+			pose_msg.position.z = 0;
+			pose_msg.orientation = tf::createQuaternionFromYaw(theta);
+			pose.publish(&pose_msg);
+#endif
+#if TERMINAL == 1
+			std::string msg = 
+			"odom\t," + 
+			std::to_string( (double)pros::millis() / 1000) + 
+			"\t," + 
+			std::to_string(x)     				 + 
+			"\t," + 
+			std::to_string(y)     				 + 
+			"\t," + 
+			std::to_string(theta) 				 + 
+			"\n";
+			printf(msg.c_str());
+#endif
+		pros::delay(50);
+	}
+}
+
 void initialize() {
-	pros::delay(100);
+	pros::delay(100);//wait for ADI Sensors to catch up
 
 	Logger::setDefaultLogger(
 	    std::make_shared<Logger>(
-	        TimeUtilFactory::createDefault().getTimer(), // It needs a Timer
+	        TimeUtilFactory::createDefault().getTimer(),
 	        "/ser/sout", // Output to the PROS terminal
 	        Logger::LogLevel::warn // Show errors and warnings
 	    )
@@ -46,16 +230,65 @@ void initialize() {
 
 	selector = dynamic_cast<GUI::Selector*>(		
     	&screen->makePage<GUI::Selector>("Skid Steer Selector")
+			.button("Test PID", [&]() {
+
+				chassis->skidSteerModel->setMaxVoltage(11000);
+				chassis->pidController->startThread();
+
+				chassis->pidController->moveDistance(12_in);
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->pidController->moveDistance(15_in);
+				chassis->pidController->moveDistance(-5.5_in);
+
+				pros::delay(50);
+				chassis->pidController->turnAngle(-130_deg);
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
+				pros::delay(500);
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+				chassis->pidController->moveDistance(17_in);
+
+				Tilter::getTilter()->setNewState(TilterState::up);
+
+				pros::delay(1900);
+
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
+				Tilter::getTilter()->tilterController->waitUntilSettled();
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+//*
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
+				Tilter::getTilter()->setNewState(TilterState::down);
+				Tilter::getTilter()->tilterController->waitUntilSettled();
+
+				chassis->pidController->waitUntilSettled();
+
+				chassis->pidController->stop();
+				chassis->pidController->startThread();
+
+				chassis->pidController->moveDistance(-17_in);
+
+				//*/
+
+				Intake::getIntake()->setNewState(IntakeState::hold);
+				chassis->pidController->stop();
+			})
 			.button("Straight PID", [&]() {
 
-				Intake::getIntake()->setNewState(IntakeState::inFull);
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
 				chassis->skidSteerModel->setMaxVoltage(12000);
 				chassis->pidController->startThread();
-				chassis->pidController->moveDistance(48_in);
-				chassis->pidController->moveDistance(-48_in);
+
+				chassis->pidController->moveDistance(36_in);
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->pidController->moveDistance(-18_in);
+				chassis->pidController->moveDistance(-12_in);
+				chassis->pidController->moveDistance(-6_in);
+
 				chassis->pidController->stop();
 
-//				Intake::getIntake()->setNewState(IntakeState::hold);
+				Intake::getIntake()->setNewState(IntakeState::hold);
 
 			})			
 			.button("Turn PID", [&]() {
@@ -68,25 +301,45 @@ void initialize() {
 				chassis->pidController->turnAngle(-270_deg);
 				chassis->pidController->stop();
 
-//				Intake::getIntake()->setNewState(IntakeState::hold);
+				Intake::getIntake()->setNewState(IntakeState::hold);
 
-			})		
-			.button("Test PID", [&]() {
-
-//				Intake::getIntake()->setNewState(IntakeState::inFull);
-
-				chassis->pidController->startThread();
-				chassis->skidSteerModel->setMaxVoltage(12000);
-				chassis->pidController->moveDistance(38_in);
-				chassis->skidSteerModel->setMaxVoltage(11000);
-				chassis->pidController->moveDistance(-14_in);
-				chassis->skidSteerModel->setMaxVoltage(12000);
-				chassis->pidController->turnAngle(135_deg);
-				chassis->pidController->stop();
-
-//				Intake::getIntake()->setNewState(IntakeState::hold);
 			})
-			.newRow()
+			.newRow()			
+			.button("Test Profile", [&]() {
+				printf("running test profile\n");
+
+				chassis->leftProfileController->flipDisable(false);
+				chassis->rightProfileController->flipDisable(false);
+
+				chassis->linearProfileStraight(12_in);
+				Intake::getIntake()->setNewState(IntakeState::inFull);
+				chassis->linearProfileStraight(15_in);
+				chassis->linearProfileStraight(-5.5_in);
+
+				chassis->linearProfileTurn(-170_deg);
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
+				pros::delay(500);
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+				chassis->linearProfileStraight(19_in);
+
+				Tilter::getTilter()->setNewState(TilterState::up);
+
+				pros::delay(1900);
+
+				Intake::getIntake()->setNewState(IntakeState::outHalf);
+				Tilter::getTilter()->tilterController->waitUntilSettled();
+
+				//*
+
+				Tilter::getTilter()->setNewState(TilterState::down);
+				chassis->linearProfileStraight(-24_in);
+				Tilter::getTilter()->tilterController->waitUntilSettled();
+				Intake::getIntake()->setNewState(IntakeState::hold);
+
+				//*/
+
+			})
 			.button("Turn Profile", [&]() {
 				printf("running test profile\n");
 
@@ -116,6 +369,7 @@ void initialize() {
 
 //				Intake::getIntake()->setNewState(IntakeState::hold);
 			})	
+			.newRow()
 			.build()
 		);
 
@@ -197,10 +451,52 @@ void initialize() {
 			chassis->skidSteerModel->resetSensors();
 		});
 
+#if ROS == 1
+	nh->initNode();
+
+	nh->advertise(posL);
+	nh->advertise(velL);
+	nh->advertise(accL);
+	nh->advertise(jrkL);
+	nh->advertise(snpL);
+	
+	nh->advertise(posR);
+	nh->advertise(velR);
+	nh->advertise(accR);
+	nh->advertise(jrkR);
+	nh->advertise(snpR);
+
+	nh->advertise(pose);
+#endif
+
+#if SD_CARD == 1
+		writeKnmc = fopen("/usd/logKnmc.csv","a+");
+		writeOdom = fopen("/usd/logOdom.csv","a+");
+		if(writeOdom == NULL || writeKnmc == NULL){
+			std::string msg("Failure to Init SD Card Files");
+			std::cout << msg << "\n";
+		    throw std::runtime_error(msg);
+		}else{
+			std::cout << "Successfully initialized SD CArd now Printing\n";
+			int integer = 0;
+			fprintf(writeKnmc, "this, is, a, fprintf, test %d\n", integer); // write to file			
+			fputs("this, is, a, fputs, test\n", writeOdom); // write to file			
+			fclose(writeKnmc);
+			fprintf(writeOdom, "this, is, a, fprintf, test %d\n", integer); // write to file			
+			fputs("this, is, a, fputs, test\n", writeKnmc); // write to file			
+			fclose(writeOdom);			
+		}
+#endif
+
+	graphing = task_create(loop, NULL, TASK_PRIORITY_DEFAULT,
+		TASK_STACK_DEPTH_DEFAULT, "graphing");
+
+	odomTask = task_create(odomFnc, NULL, TASK_PRIORITY_DEFAULT,
+		TASK_STACK_DEPTH_DEFAULT, "odom task");
+
+
 	printf("init end\n");
 
-	nh->initNode();
-	nh->advertise(chatter);
 }
 
 void disabled() {}
@@ -240,9 +536,6 @@ void opcontrol() {
 	chassis->skidSteerModel->setMaxVoltage(12000);
 
 	while (true) {
-		ros_msg.data = chassis->skidSteerModel->getSensorVals()[0];
-		chatter.publish(&ros_msg);
-		nh->spinOnce();
 
 		chassis->skidSteerModel->arcade(
 			master->getAnalog(ControllerAnalog::rightY), 
@@ -309,6 +602,6 @@ void opcontrol() {
 			Tilter::getTilter()->setNewState(TilterState::down);
 		}
 
-		pros::delay(20);
+		pros::delay(10);
 	}
 }
