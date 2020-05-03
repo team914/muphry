@@ -1,171 +1,168 @@
+/**
+ * @author     Acetousk
+ * @date       2020
+ */
 #include "muphry/subsystems/intake.hpp"
 
-Intake::Intake(){
+Intake::Intake() {
 
-    //declare diameter
-    circumference = intakeDiameter.convert(meter) * PI;
-    
-    //declare intake motors
-    leftIntake = std::make_shared<Motor>(leftIntakePort);
-    leftIntake->setEncoderUnits(AbstractMotor::encoderUnits::degrees);
+  // declare diameter
+  circumference = intakeDiameter.convert(meter) * PI;
 
-    rightIntake = std::make_shared<Motor>(rightIntakePort);
-    rightIntake->setEncoderUnits(AbstractMotor::encoderUnits::degrees);
+  // declare intake motors
+  leftIntake = std::make_shared<Motor>(leftIntakePort);
+  leftIntake->setEncoderUnits(AbstractMotor::encoderUnits::degrees);
 
-    //declare intake controllers
-    leftController = std::make_shared<AsyncPosPIDController>(
-        leftIntake->getEncoder(),
-        leftIntake,
-        TimeUtilFactory().create(),
-        intakekP,
-        intakekI,
-        intakekD
-    );
-    leftController->startThread();
+  rightIntake = std::make_shared<Motor>(rightIntakePort);
+  rightIntake->setEncoderUnits(AbstractMotor::encoderUnits::degrees);
 
-    rightController = std::make_shared<AsyncPosPIDController>(
-        rightIntake->getEncoder(),
-        rightIntake,
-        TimeUtilFactory().create(),
-        intakekP,
-        intakekI,
-        intakekD
-    );
-    rightController->startThread();    
+  // declare intake controllers
+  leftController = std::make_shared<AsyncPosPIDController>(
+    leftIntake->getEncoder(), leftIntake, TimeUtilFactory().create(), intakekP, intakekI, intakekD);
+  leftController->startThread();
 
+  rightController = std::make_shared<AsyncPosPIDController>(rightIntake->getEncoder(),
+                                                            rightIntake,
+                                                            TimeUtilFactory().create(),
+                                                            intakekP,
+                                                            intakekI,
+                                                            intakekD);
+  rightController->startThread();
 }
 
-void Intake::initialize(){}
+void Intake::initialize() {
+}
 
-void Intake::loop(){
-    while(true){
-        //printf("Intake State = ");
+void Intake::loop() {
+  while (true) {
+    // printf("Intake State = ");
 
-        double target = (leftIntake->getEncoder()->get() + rightIntake->getEncoder()->get()) / 2;
+    double target = (leftIntake->getEncoder()->get() + rightIntake->getEncoder()->get()) / 2;
 
-        switch(state){
-            case IntakeState::inFull:
-                //printf("inFull\n");
+    switch (state) {
+    case IntakeState::inFull:
+      // printf("inFull\n");
 
-                leftIntake->setVoltageLimit(12000);
-                rightIntake->setVoltageLimit(12000);
+      leftIntake->setVoltageLimit(12000);
+      rightIntake->setVoltageLimit(12000);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                leftController->setTarget( target + 1000 );
-                rightController->setTarget( target + 1000 );
+      leftController->setTarget(target + 1000);
+      rightController->setTarget(target + 1000);
 
-                setDone();
-            break;
-            case IntakeState::outFull:
-                //printf("outFull\n");
+      setDone();
+      break;
+    case IntakeState::outFull:
+      // printf("outFull\n");
 
-                leftIntake->setVoltageLimit(12000);
-                rightIntake->setVoltageLimit(12000);
+      leftIntake->setVoltageLimit(12000);
+      rightIntake->setVoltageLimit(12000);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                leftController->setTarget( target - 1000 );
-                rightController->setTarget( target - 1000 );
+      leftController->setTarget(target - 1000);
+      rightController->setTarget(target - 1000);
 
-                setDone();
-            break;
-            case IntakeState::inHalf:
-                //printf("inHalf\n");
+      setDone();
+      break;
+    case IntakeState::inHalf:
+      // printf("inHalf\n");
 
-                leftIntake->setVoltageLimit(6000);
-                rightIntake->setVoltageLimit(6000);
+      leftIntake->setVoltageLimit(6000);
+      rightIntake->setVoltageLimit(6000);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                leftController->setTarget( target + 1000 );
-                rightController->setTarget( target + 1000 );
+      leftController->setTarget(target + 1000);
+      rightController->setTarget(target + 1000);
 
-                setDone();
-            break;
-            case IntakeState::outHalf:
-                //printf("outHalf\n");
+      setDone();
+      break;
+    case IntakeState::outHalf:
+      // printf("outHalf\n");
 
-                leftIntake->setVoltageLimit(6000);
-                rightIntake->setVoltageLimit(6000);
+      leftIntake->setVoltageLimit(6000);
+      rightIntake->setVoltageLimit(6000);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                leftController->setTarget( target - 1000 );
-                rightController->setTarget( target - 1000 );
+      leftController->setTarget(target - 1000);
+      rightController->setTarget(target - 1000);
 
-                setDone();
-            break;
-            case IntakeState::hold:
-                //printf("hold\n");
+      setDone();
+      break;
+    case IntakeState::hold:
+      // printf("hold\n");
 
-                leftIntake->setVoltageLimit(12000);
-                rightIntake->setVoltageLimit(12000);
+      leftIntake->setVoltageLimit(12000);
+      rightIntake->setVoltageLimit(12000);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                leftController->setTarget( leftIntake->getEncoder()->get() );
-                rightController->setTarget( rightIntake->getEncoder()->get() );
+      leftController->setTarget(leftIntake->getEncoder()->get());
+      rightController->setTarget(rightIntake->getEncoder()->get());
 
-                setDone();            
-            break;
-            case IntakeState::off:
-                //printf("off\n");
+      setDone();
+      break;
+    case IntakeState::off:
+      // printf("off\n");
 
-                leftIntake->tarePosition();
-                rightIntake->tarePosition();
+      leftIntake->tarePosition();
+      rightIntake->tarePosition();
 
-                leftController->flipDisable(true);
-                rightController->flipDisable(true);
+      leftController->flipDisable(true);
+      rightController->flipDisable(true);
 
-                setDone();
-            break;
-            case IntakeState::moveDistance:
-                //printf("moveDistance\n");
+      setDone();
+      break;
+    case IntakeState::moveDistance:
+      // printf("moveDistance\n");
 
-                leftIntake->setVoltageLimit(12000);
-                rightIntake->setVoltageLimit(12000);
+      leftIntake->setVoltageLimit(12000);
+      rightIntake->setVoltageLimit(12000);
 
-                leftController->setTarget( leftIntake->getEncoder()->get() + distance / circumference / 360 );
-                rightController->setTarget(  rightIntake->getEncoder()->get() + distance / circumference / 360 );
+      leftController->setTarget(leftIntake->getEncoder()->get() + distance / circumference / 360);
+      rightController->setTarget(rightIntake->getEncoder()->get() + distance / circumference / 360);
 
-                leftController->flipDisable(false);
-                rightController->flipDisable(false);
+      leftController->flipDisable(false);
+      rightController->flipDisable(false);
 
-                auto time = TimeUtilFactory().create();
+      auto time = TimeUtilFactory().create();
 
-                bool exit = false;
-                while( !exit ){
-                    if( !leftController->isSettled() || !rightController->isSettled() ){
-                        if( time.getTimer()->getDtFromStart().convert(millisecond) > 2000 || Intake::getIntake()->getState() != IntakeState::moveDistance ){
-                            exit = true;
-                        }
-                    }else{
-                        exit = true;
-                    }
-                    pros::delay(20);
-                }
-            break;            
+      bool exit = false;
+      while (!exit) {
+        if (!leftController->isSettled() || !rightController->isSettled()) {
+          if (time.getTimer()->getDtFromStart().convert(millisecond) > 2000 ||
+              Intake::getIntake()->getState() != IntakeState::moveDistance) {
+            exit = true;
+          }
+        } else {
+          exit = true;
         }
-
-        pros::delay(20); 
+        pros::delay(20);
+      }
+      break;
     }
+
+    pros::delay(20);
+  }
 }
 
-Intake* Intake::intake = nullptr;
+Intake *Intake::intake = nullptr;
 
-Intake* Intake::getIntake(){
-    if(!intake){
-        intake = new Intake();
-    }
-    return intake;
+Intake *Intake::getIntake() {
+  if (!intake) {
+    intake = new Intake();
+  }
+  return intake;
 }
 
-void Intake::setDistance( QLength idistance ){
-    distance = idistance.convert(meter);
+void Intake::setDistance(QLength idistance) {
+  distance = idistance.convert(meter);
 }

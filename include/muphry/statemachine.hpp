@@ -1,3 +1,7 @@
+/**
+ * @author     theol0403
+ * @date       2020
+ */
 #pragma once
 
 #include "lib7842/api/other/taskWrapper.hpp"
@@ -15,7 +19,7 @@ using namespace lib7842;
 template <typename States, States assumedState = States::off>
 class StateMachine : public TaskWrapper {
 
-public:
+  public:
   StateMachine() = default;
   virtual ~StateMachine() = default;
 
@@ -24,7 +28,7 @@ public:
    *
    * @param istate The state
    */
-  virtual void setState(const States& istate) {
+  virtual void setState(const States &istate) {
     state = istate;
   }
 
@@ -33,7 +37,7 @@ public:
    *
    * @param istate The istate
    */
-  virtual void setStateBlocking(const States& istate) {
+  virtual void setStateBlocking(const States &istate) {
     _isDone = false;
     state = istate;
     while (!isDone()) {
@@ -46,7 +50,7 @@ public:
    *
    * @param istate The state
    */
-  virtual void setNewState(const States& istate) {
+  virtual void setNewState(const States &istate) {
     if (istate != lastState) {
       state = istate;
       lastState = istate;
@@ -58,7 +62,7 @@ public:
    *
    * @return The state.
    */
-  virtual const States& getState() const {
+  virtual const States &getState() const {
     return state;
   }
 
@@ -71,7 +75,7 @@ public:
     return _isDone;
   }
 
-protected:
+  protected:
   /**
    * Override this method to implement setup procedures.
    */
@@ -86,8 +90,8 @@ protected:
     _isDone = true;
   }
 
-  States state {States::off};
-  States lastState {assumedState};
+  States state{States::off};
+  States lastState{assumedState};
 
   bool _isDone = false;
 };

@@ -1,9 +1,13 @@
+/**
+ * @author     Acetousk
+ * @date       2020
+ */
 #include "muphry/robot.hpp"
 
-//controller
+// controller
 std::shared_ptr<Controller> master;
 
-//controller buttons
+// controller buttons
 std::shared_ptr<ControllerButton> intakeUpBtn;
 std::shared_ptr<ControllerButton> intakeDownBtn;
 std::shared_ptr<ControllerButton> tilterUpBtn;
@@ -11,18 +15,18 @@ std::shared_ptr<ControllerButton> tilterDownBtn;
 std::shared_ptr<ControllerButton> liftUpBtn;
 std::shared_ptr<ControllerButton> liftMidBtn;
 
-//screen
+// screen
 std::shared_ptr<GUI::Screen> screen;
-GUI::Selector* selector;
-GUI::Actions* intakeActions;
-GUI::Actions* liftActions;
-GUI::Actions* tilterActions;
+GUI::Selector *selector;
+GUI::Actions *intakeActions;
+GUI::Actions *liftActions;
+GUI::Actions *tilterActions;
 
-//lift
+// lift
 bool liftToggle = true;
 
-//ROS
-std::shared_ptr<ros::NodeHandle>  nh = std::make_shared<ros::NodeHandle>();
+// ROS
+std::shared_ptr<ros::NodeHandle> nh = std::make_shared<ros::NodeHandle>();
 
 std_msgs::Float32 posL_msg;
 std_msgs::Float32 velL_msg;
@@ -42,7 +46,6 @@ std_msgs::Float32 accR_msg;
 std_msgs::Float32 jrkR_msg;
 std_msgs::Float32 snpR_msg;
 
-
 ros::Publisher posR = ros::Publisher("posR\0", &posR_msg);
 ros::Publisher velR = ros::Publisher("velR\0", &velR_msg);
 ros::Publisher accR = ros::Publisher("accR\0", &accR_msg);
@@ -52,5 +55,5 @@ ros::Publisher snpR = ros::Publisher("snpR\0", &snpR_msg);
 geometry_msgs::Pose pose_msg;
 ros::Publisher pose = ros::Publisher("pose\0", &pose_msg);
 
-//chassis
+// chassis
 std::shared_ptr<Chassis> chassis = std::make_shared<Chassis>();

@@ -1,30 +1,31 @@
+/**
+ * @author     Acetousk
+ * @date       2020
+ */
 #pragma once
 
-#include "main.h"
-
 #include "lib7842/api.hpp"
-#include "okapi/api.hpp"
+#include "main.h"
 #include "muphry/subsystems/chassis.hpp"
-
+#include "okapi/api.hpp"
+#include "ros_lib/geometry_msgs/Pose2D.h"
 #include "ros_lib/ros.h"
 #include "ros_lib/ros/time.h"
-#include "ros_lib/std_msgs/Time.h"
 #include "ros_lib/std_msgs/Float32.h"
-#include "ros_lib/geometry_msgs/Pose2D.h"
+#include "ros_lib/std_msgs/Time.h"
 #include "ros_lib/tf/tf.h"
-
-#include <memory>
-#include <map>
 #include <functional>
+#include <map>
+#include <memory>
 
 using namespace lib7842;
 using namespace okapi;
 using namespace okapi::literals;
 
-//controller
+// controller
 extern std::shared_ptr<Controller> master;
 
-//controller buttons
+// controller buttons
 extern std::shared_ptr<ControllerButton> intakeUpBtn;
 extern std::shared_ptr<ControllerButton> intakeDownBtn;
 extern std::shared_ptr<ControllerButton> tilterUpBtn;
@@ -32,14 +33,14 @@ extern std::shared_ptr<ControllerButton> tilterDownBtn;
 extern std::shared_ptr<ControllerButton> liftUpBtn;
 extern std::shared_ptr<ControllerButton> liftMidBtn;
 
-//screen
+// screen
 extern std::shared_ptr<GUI::Screen> screen;
-extern GUI::Selector* selector;
-extern GUI::Actions* intakeActions;
-extern GUI::Actions* liftActions;
-extern GUI::Actions* tilterActions;
+extern GUI::Selector *selector;
+extern GUI::Actions *intakeActions;
+extern GUI::Actions *liftActions;
+extern GUI::Actions *tilterActions;
 
-//intake
+// intake
 const int leftIntakePort{4};
 const int rightIntakePort{-7};
 const AbstractMotor::gearset intakeGearset{AbstractMotor::gearset::green};
@@ -48,7 +49,7 @@ const double intakekP{.001};
 const double intakekI{0};
 const double intakekD{0};
 
-//lift
+// lift
 const int liftPort{15};
 const AbstractMotor::gearset liftGearset{AbstractMotor::gearset::red};
 const double liftkP{.005};
@@ -60,9 +61,9 @@ const double a2CubeStack{150};
 const double a3CubeStack{350};
 const double a4CubeStack{550};
 const double liftDown{-20};
-extern bool liftToggle;//true means the lift is up false means the lift is down
+extern bool liftToggle; // true means the lift is up false means the lift is down
 
-//tilter
+// tilter
 const int tilterPort{9};
 const AbstractMotor::gearset tilterGearset{AbstractMotor::gearset::red};
 const double tilterkP{.01};
@@ -72,11 +73,11 @@ const double tilterUp{1100};
 const double tilterLiftUp{100};
 const double tilterDown{0};
 
-//chassis
+// chassis
 extern std::shared_ptr<Chassis> chassis;
 
-//ROS
-extern std::shared_ptr<ros::NodeHandle>  nh;
+// ROS
+extern std::shared_ptr<ros::NodeHandle> nh;
 
 extern std_msgs::Float32 posL_msg;
 extern std_msgs::Float32 velL_msg;
